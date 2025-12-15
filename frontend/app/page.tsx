@@ -12,39 +12,52 @@ export default function Home() {
   const [isProcessing, setIsProcessing] = useState(false)
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <h1 className="text-3xl font-bold text-gray-900">
-            ✨ Photolab
-          </h1>
-          <p className="text-gray-600 mt-1">
-            Удаление фона с изображений за секунды
-          </p>
+    <main className="min-h-screen bg-white">
+      {/* Header - Minimalist like Cursor */}
+      <header className="border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-6 py-5">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-semibold text-black">
+              Photolab
+            </h1>
+            <nav className="flex gap-8 text-sm">
+              <a href="#" className="text-gray-600 hover:text-black transition">Features</a>
+              <a href="#" className="text-gray-600 hover:text-black transition">Pricing</a>
+            </nav>
+          </div>
         </div>
       </header>
 
+      {/* Hero Section - Cursor style */}
+      <section className="max-w-4xl mx-auto px-6 pt-20 pb-12 text-center">
+        <h2 className="text-6xl font-semibold text-black leading-tight mb-6">
+          Удаляйте фон с изображений за секунды
+        </h2>
+        <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+          Загрузите фото и получите профессиональный результат с помощью AI. Быстро, просто, бесплатно.
+        </p>
+      </section>
+
       {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6">
+      <div className="max-w-5xl mx-auto px-6 pb-20">
+        {/* Tabs - Clean minimal style */}
+        <div className="flex gap-3 mb-8 justify-center">
           <button
             onClick={() => setActiveTab('single')}
-            className={`px-6 py-2 rounded-lg font-medium transition ${
+            className={`px-6 py-3 rounded-lg font-medium transition text-sm ${
               activeTab === 'single'
-                ? 'bg-primary-500 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                ? 'bg-black text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
             Одно изображение
           </button>
           <button
             onClick={() => setActiveTab('batch')}
-            className={`px-6 py-2 rounded-lg font-medium transition ${
+            className={`px-6 py-3 rounded-lg font-medium transition text-sm ${
               activeTab === 'batch'
-                ? 'bg-primary-500 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                ? 'bg-black text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
             Пакетная обработка
@@ -77,13 +90,10 @@ export default function Home() {
         )}
       </div>
 
-      {/* Footer */}
-      <footer className="border-t mt-16 py-8 bg-gray-50">
-        <div className="max-w-6xl mx-auto px-4 text-center text-gray-600">
-          <p>Сделано с помощью AI • Быстро • Бесплатно</p>
-          <p className="text-sm mt-2">
-            Powered by Replicate & FastAPI
-          </p>
+      {/* Footer - Minimal */}
+      <footer className="border-t border-gray-200 mt-20 py-12">
+        <div className="max-w-5xl mx-auto px-6 text-center text-sm text-gray-500">
+          <p>Powered by AI • Fast • Free</p>
         </div>
       </footer>
     </main>
