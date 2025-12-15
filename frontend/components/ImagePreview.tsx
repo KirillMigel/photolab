@@ -35,35 +35,43 @@ export default function ImagePreview({
   if (!originalImage && !processedImage) return null
 
   return (
-    <div className="bg-white rounded-xl shadow-lg p-6 space-y-4">
+    <div className="bg-white rounded-2xl p-8 space-y-6" style={{ border: '1px solid rgba(38, 37, 30, 0.1)' }}>
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-800">Результат</h2>
+        <h2 className="text-lg font-semibold" style={{ color: '#26251E' }}>Результат</h2>
         
         {processedImage && !isProcessing && (
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <button
               onClick={() => setShowComparison(!showComparison)}
-              className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition"
+              className="px-4 py-2 text-sm font-medium rounded-lg transition"
+              style={{ 
+                background: 'rgba(38, 37, 30, 0.05)',
+                color: '#26251E'
+              }}
             >
               {showComparison ? 'Только результат' : 'Сравнить'}
             </button>
             <button
               onClick={() => downloadImage(processedImage, 'photolab-result.png')}
-              className="px-4 py-2 text-sm bg-primary-500 text-white hover:bg-primary-600 rounded-lg transition"
+              className="px-5 py-2 text-sm font-medium rounded-lg transition"
+              style={{ 
+                background: '#26251E',
+                color: '#F7F7F4'
+              }}
             >
-              ⬇️ Скачать
+              Скачать
             </button>
           </div>
         )}
       </div>
 
       {/* Images */}
-      <div className={`grid gap-4 ${showComparison && originalImage && processedImage ? 'md:grid-cols-2' : 'grid-cols-1'}`}>
+      <div className={`grid gap-6 ${showComparison && originalImage && processedImage ? 'md:grid-cols-2' : 'grid-cols-1'}`}>
         {/* Original */}
         {showComparison && originalImage && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-gray-600">До</p>
-            <div className="relative rounded-lg overflow-hidden bg-gray-100">
+          <div className="space-y-3">
+            <p className="text-sm font-medium" style={{ color: '#26251E', opacity: 0.6 }}>До</p>
+            <div className="relative rounded-xl overflow-hidden" style={{ background: '#F7F7F4' }}>
               <img
                 src={originalImage}
                 alt="Original"
@@ -75,12 +83,12 @@ export default function ImagePreview({
 
         {/* Processed */}
         {processedImage && (
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-gray-600">После</p>
-            <div className="relative rounded-lg overflow-hidden bg-checker">
+          <div className="space-y-3">
+            <p className="text-sm font-medium" style={{ color: '#26251E', opacity: 0.6 }}>После</p>
+            <div className="relative rounded-xl overflow-hidden bg-checker">
               {isProcessing ? (
                 <div className="flex items-center justify-center h-64">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
+                  <div className="animate-spin rounded-full h-12 w-12 border-2 border-t-transparent" style={{ borderColor: '#26251E', borderTopColor: 'transparent' }}></div>
                 </div>
               ) : (
                 <img
@@ -93,15 +101,6 @@ export default function ImagePreview({
           </div>
         )}
       </div>
-
-      {/* Info */}
-      {processedImage && !isProcessing && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <p className="text-sm text-green-800">
-            ✅ Фон успешно удалён! Изображение сохранено в формате PNG с прозрачным фоном.
-          </p>
-        </div>
-      )}
     </div>
   )
 }

@@ -83,42 +83,22 @@ export default function ImageUploader({
   )
 
   return (
-    <div className="space-y-4">
-      {/* Mode Selector */}
-      <div className="flex items-center gap-4 bg-white p-4 rounded-lg shadow-sm">
-        <span className="text-sm font-medium text-gray-700">Режим:</span>
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="radio"
-            value="quality"
-            checked={mode === 'quality'}
-            onChange={() => setMode('quality')}
-            className="w-4 h-4 text-primary-500"
-          />
-          <span className="text-sm">Качество (медленнее)</span>
-        </label>
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="radio"
-            value="fast"
-            checked={mode === 'fast'}
-            onChange={() => setMode('fast')}
-            className="w-4 h-4 text-primary-500"
-          />
-          <span className="text-sm">Быстро</span>
-        </label>
-      </div>
+    <div className="space-y-6">
 
-      {/* Upload Zone */}
+      {/* Upload Zone - Cursor style */}
       <div
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
-        className={`upload-zone border-2 border-dashed rounded-xl p-12 text-center transition ${
+        className={`upload-zone border-2 border-dashed rounded-2xl p-16 text-center transition ${
           isDragging
-            ? 'border-primary-500 bg-primary-50 scale-105'
-            : 'border-gray-300 bg-white hover:border-primary-400'
+            ? 'scale-[1.02]'
+            : ''
         } ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
+        style={{
+          borderColor: isDragging ? '#26251E' : 'rgba(38, 37, 30, 0.2)',
+          background: '#fff'
+        }}
       >
         <input
           type="file"
@@ -129,28 +109,28 @@ export default function ImageUploader({
           disabled={isProcessing}
         />
         
-        <div className="space-y-4">
-          <div className="text-6xl">📷</div>
-          
+        <div className="space-y-6">
           {isProcessing ? (
             <div>
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
-              <p className="mt-4 text-gray-600">Обрабатываем изображение...</p>
+              <div className="inline-block animate-spin rounded-full h-10 w-10 border-2 border-t-transparent" style={{ borderColor: '#26251E', borderTopColor: 'transparent' }}></div>
+              <p className="mt-6 text-base" style={{ color: '#26251E', opacity: 0.6 }}>
+                Обрабатываем изображение...
+              </p>
             </div>
           ) : (
             <>
-              <p className="text-lg font-medium text-gray-700">
-                Перетащите изображение сюда
-              </p>
-              <p className="text-sm text-gray-500">или</p>
-              <label htmlFor="file-input">
-                <span className="inline-block px-6 py-3 bg-primary-500 text-white rounded-lg cursor-pointer hover:bg-primary-600 transition">
-                  Выберите файл
-                </span>
-              </label>
-              <p className="text-xs text-gray-400 mt-4">
-                PNG, JPEG, WebP до 15 МБ
-              </p>
+              <div className="flex justify-center">
+                <img src="/images/upload-icon.svg" alt="Upload" className="w-12 h-12" style={{ opacity: 0.3 }} />
+              </div>
+              
+              <div className="space-y-3">
+                <p className="text-base font-medium" style={{ color: '#26251E' }}>
+                  Загрузите фото
+                </p>
+                <p className="text-sm" style={{ color: '#26251E', opacity: 0.6 }}>
+                  Или перетащите изображение
+                </p>
+              </div>
             </>
           )}
         </div>

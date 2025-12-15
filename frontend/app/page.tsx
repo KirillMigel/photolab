@@ -12,88 +12,66 @@ export default function Home() {
   const [isProcessing, setIsProcessing] = useState(false)
 
   return (
-    <main className="min-h-screen bg-white">
-      {/* Header - Minimalist like Cursor */}
-      <header className="border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-6 py-5">
+    <main className="min-h-screen" style={{ background: '#F7F7F4' }}>
+      {/* Header - Cursor style */}
+      <header className="border-b" style={{ borderColor: 'rgba(38, 37, 30, 0.1)' }}>
+        <div className="max-w-7xl mx-auto px-8 py-6">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-semibold text-black">
-              Photolab
-            </h1>
-            <nav className="flex gap-8 text-sm">
-              <a href="#" className="text-gray-600 hover:text-black transition">Features</a>
-              <a href="#" className="text-gray-600 hover:text-black transition">Pricing</a>
-            </nav>
+            <img src="/images/logo.svg" alt="Photolab" className="h-6" />
+            <button 
+              className="px-5 py-2 rounded-lg text-sm font-medium transition"
+              style={{ 
+                background: '#26251E', 
+                color: '#F7F7F4'
+              }}
+            >
+              Войти
+            </button>
           </div>
         </div>
       </header>
 
-      {/* Hero Section - Cursor style */}
-      <section className="max-w-4xl mx-auto px-6 pt-20 pb-12 text-center">
-        <h2 className="text-6xl font-semibold text-black leading-tight mb-6">
-          Удаляйте фон с изображений за секунды
+      {/* Hero Section - Clean like Cursor */}
+      <section className="max-w-4xl mx-auto px-8 pt-24 pb-16 text-center">
+        <h2 
+          className="text-7xl font-semibold leading-tight mb-6"
+          style={{ color: '#26251E' }}
+        >
+          Удаление фона
         </h2>
-        <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-          Загрузите фото и получите профессиональный результат с помощью AI. Быстро, просто, бесплатно.
+        <p 
+          className="text-xl mb-12 max-w-2xl mx-auto"
+          style={{ color: '#26251E', opacity: 0.6 }}
+        >
+          Бесплатно стирайте фоны изображений
         </p>
       </section>
 
       {/* Main Content */}
-      <div className="max-w-5xl mx-auto px-6 pb-20">
-        {/* Tabs - Clean minimal style */}
-        <div className="flex gap-3 mb-8 justify-center">
-          <button
-            onClick={() => setActiveTab('single')}
-            className={`px-6 py-3 rounded-lg font-medium transition text-sm ${
-              activeTab === 'single'
-                ? 'bg-black text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Одно изображение
-          </button>
-          <button
-            onClick={() => setActiveTab('batch')}
-            className={`px-6 py-3 rounded-lg font-medium transition text-sm ${
-              activeTab === 'batch'
-                ? 'bg-black text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Пакетная обработка
-          </button>
-        </div>
-
-        {/* Single Image Mode */}
-        {activeTab === 'single' && (
-          <div className="space-y-6">
-            <ImageUploader
-              onImageSelect={setOriginalImage}
-              onProcessed={setProcessedImage}
+      <div className="max-w-3xl mx-auto px-8 pb-20">
+        {/* Upload Interface */}
+        <div className="space-y-8">
+          <ImageUploader
+            onImageSelect={setOriginalImage}
+            onProcessed={setProcessedImage}
+            isProcessing={isProcessing}
+            setIsProcessing={setIsProcessing}
+          />
+          
+          {(originalImage || processedImage) && (
+            <ImagePreview
+              originalImage={originalImage}
+              processedImage={processedImage}
               isProcessing={isProcessing}
-              setIsProcessing={setIsProcessing}
             />
-            
-            {(originalImage || processedImage) && (
-              <ImagePreview
-                originalImage={originalImage}
-                processedImage={processedImage}
-                isProcessing={isProcessing}
-              />
-            )}
-          </div>
-        )}
-
-        {/* Batch Mode */}
-        {activeTab === 'batch' && (
-          <BatchUploader />
-        )}
+          )}
+        </div>
       </div>
 
-      {/* Footer - Minimal */}
-      <footer className="border-t border-gray-200 mt-20 py-12">
-        <div className="max-w-5xl mx-auto px-6 text-center text-sm text-gray-500">
-          <p>Powered by AI • Fast • Free</p>
+      {/* Footer */}
+      <footer className="border-t mt-20 py-8" style={{ borderColor: 'rgba(38, 37, 30, 0.1)' }}>
+        <div className="max-w-7xl mx-auto px-8 text-center text-sm" style={{ color: '#26251E', opacity: 0.5 }}>
+          <p>Photolab © 2025</p>
         </div>
       </footer>
     </main>
