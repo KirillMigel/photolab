@@ -1,0 +1,60 @@
+services:
+  # FastAPI Backend
+  - type: web
+    name: photolab-api
+    env: python
+    region: frankfurt  # Ближайший к RU регион
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHONPATH
+        value: /opt/render/project/src/backend
+      - key: REPLICATE_API_TOKEN
+        sync: false  # Задаётся вручную в Render Dashboard
+      - key: REPLICATE_MODEL_QUALITY
+        value: 851-labs/background-remover
+      - key: REPLICATE_MODEL_FAST
+        value: lucataco/remove-bg
+      - key: MAX_FILE_SIZE_MB
+        value: 15
+      - key: MAX_DIMENSION
+        value: 3072
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: photolab-redis
+          property: connectionString
+
+  # RQ Worker для batch обработки
+  - type: worker
+    name: photolab-worker
+    env: python
+    region: frankfurt
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: python backend/worker.py
+    envVars:
+      - key: PYTHONPATH
+        value: /opt/render/project/src/backend
+      - key: REPLICATE_API_TOKEN
+        sync: false
+      - key: REPLICATE_MODEL_QUALITY
+        value: 851-labs/background-remover
+      - key: REPLICATE_MODEL_FAST
+        value: lucataco/remove-bg
+      - key: MAX_FILE_SIZE_MB
+        value: 15
+      - key: MAX_DIMENSION
+        value: 3072
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: photolab-redis
+          property: connectionString
+
+databases:
+  # Managed Redis (Free tier: 25MB, 30 подключений)
+  - name: photolab-redis
+    region: frankfurt
+    plan: free  # Бесплатно на старте
+    ipAllowList: []
+
