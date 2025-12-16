@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
@@ -12,7 +13,7 @@ class Settings(BaseSettings):
     max_file_size_mb: int = Field(15, alias="MAX_FILE_SIZE_MB")
     max_dimension: int = Field(3072, alias="MAX_DIMENSION")
 
-    redis_url: str = Field("redis://redis:6379/0", alias="REDIS_URL")
+    redis_url: Optional[str] = Field(None, alias="REDIS_URL")
 
     class Config:
         case_sensitive = False

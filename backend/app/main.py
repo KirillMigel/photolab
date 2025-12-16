@@ -8,9 +8,6 @@ from fastapi import BackgroundTasks, Depends, FastAPI, File, HTTPException, Uplo
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from PIL import Image
-from redis import Redis
-from rq import Queue
-from rq.job import Job
 
 from app import replicate_client
 from app.config import settings
@@ -27,8 +24,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-redis_conn = Redis.from_url(settings.redis_url)
-queue = Queue("rembg", connection=redis_conn)
+# Redis опционально (только для batch)
+redis_conn = None
+queue = None
+if settings.redis_url:
+    try:
+        from redis import Redis
+        from rq import Queue
+        redis_conn = Redis.from_url(settings.redis_url)
+        queue = Queue("rembg", connection=redis_conn)
+    except Exception as e:
+        print(f"Redis unavailable: {e}. Batch processing disabled.")
 
 
 def _ensure_size(file_bytes: bytes) -> None:
@@ -85,6 +91,12 @@ async def remove_bg(file: UploadFile = File(...), mode: Mode = "quality"):
 
 @app.post("/batch")
 async def batch(files: List[UploadFile] = File(...), mode: Mode = "quality"):
+    if not queue:
+        raise HTTPException(
+            status_code=503,
+            detail="Batch processing temporarily unavailable. Please use single image upload."
+        )
+    
     if not files:
         raise HTTPException(status_code=400, detail="No files provided")
     payloads = []
@@ -98,6 +110,10 @@ async def batch(files: List[UploadFile] = File(...), mode: Mode = "quality"):
 
 @app.get("/batch/{job_id}")
 async def batch_status(job_id: str):
+    if not redis_conn:
+        raise HTTPException(status_code=503, detail="Batch processing unavailable")
+    
+    from rq.job import Job
     try:
         job = Job.fetch(job_id, connection=redis_conn)
     except Exception:
