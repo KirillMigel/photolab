@@ -106,8 +106,10 @@ export default function ImageUploader({
         style={{
           borderColor: isDragging || isHover ? '#26251E' : 'rgba(38, 37, 30, 0.2)',
           background: '#fff',
-          minHeight: '380px',
-          padding: '64px 80px'
+          minHeight: '420px',
+          padding: '60px',
+          width: '100%',
+          height: '100%'
         }}
       >
         <input

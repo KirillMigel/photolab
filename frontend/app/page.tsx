@@ -71,17 +71,16 @@ export default function Home() {
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
-            minHeight: '520px'
+            minHeight: '580px',
+            padding: '80px'
           }}
         >
-          <div className="px-6 sm:px-10 pt-6 pb-8 h-full flex items-center justify-center">
-            <ImageUploader
-              onImageSelect={setOriginalImage}
-              onProcessed={setProcessedImage}
-              isProcessing={isProcessing}
-              setIsProcessing={setIsProcessing}
-            />
-          </div>
+          <ImageUploader
+            onImageSelect={setOriginalImage}
+            onProcessed={setProcessedImage}
+            isProcessing={isProcessing}
+            setIsProcessing={setIsProcessing}
+          />
         </div>
 
         {(originalImage || processedImage) && (
