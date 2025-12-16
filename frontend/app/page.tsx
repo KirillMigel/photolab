@@ -63,15 +63,15 @@ export default function Home() {
       </section>
 
       {/* Main Content */}
-      <div className="max-w-5xl mx-auto px-8 pb-12 -mt-4">
+      <div className="max-w-6xl mx-auto px-8 pb-12 -mt-8">
         <div
           className="rounded-3xl overflow-hidden"
           style={{
-            backgroundImage: 'url("/images/Group 3-2.png")',
+            backgroundImage: 'url("/images/bg-upload.png")',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
-            minHeight: '480px'
+            minHeight: '520px'
           }}
         >
           <div className="px-6 sm:px-10 pt-6 pb-8 h-full flex items-center justify-center">
