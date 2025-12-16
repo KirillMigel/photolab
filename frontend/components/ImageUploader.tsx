@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { removeBackground } from '@/lib/api'
 
 interface ImageUploaderProps {
@@ -19,6 +19,8 @@ export default function ImageUploader({
   const [isDragging, setIsDragging] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [mode, setMode] = useState<'quality' | 'fast'>('quality')
+  const [isHover, setIsHover] = useState(false)
+  const inputRef = useRef<HTMLInputElement | null>(null)
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -89,18 +91,25 @@ export default function ImageUploader({
       <div
         onDrop={handleDrop}
         onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        className={`upload-zone border-2 border-dashed rounded-2xl p-16 text-center transition ${
-          isDragging
-            ? 'scale-[1.02]'
-            : ''
+        onDragLeave={() => {
+          handleDragLeave()
+          setIsHover(false)
+        }}
+        onMouseEnter={() => setIsHover(true)}
+        onMouseLeave={() => setIsHover(false)}
+        onClick={() => {
+          if (!isProcessing) inputRef.current?.click()
+        }}
+        className={`upload-zone border-2 border-dashed rounded-2xl p-14 text-center transition cursor-pointer ${
+          isDragging || isHover ? 'scale-[1.01]' : ''
         } ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
         style={{
-          borderColor: isDragging ? '#26251E' : 'rgba(38, 37, 30, 0.2)',
+          borderColor: isDragging || isHover ? '#26251E' : 'rgba(38, 37, 30, 0.2)',
           background: '#fff'
         }}
       >
         <input
+          ref={inputRef}
           type="file"
           id="file-input"
           accept="image/*"
@@ -120,11 +129,14 @@ export default function ImageUploader({
           ) : (
             <>
               <div className="flex justify-center">
-                <img src="/images/upload-icon.svg" alt="Upload" className="w-12 h-12" style={{ opacity: 0.3 }} />
+                <img src="/images/upload.svg" alt="Upload" className="w-12 h-12" style={{ opacity: 0.4 }} />
               </div>
               
               <div className="space-y-3">
-                <p className="text-base font-medium" style={{ color: '#26251E' }}>
+                <p
+                  className="text-base font-medium"
+                  style={{ color: isHover ? '#FC8C1D' : '#26251E' }}
+                >
                   Загрузите фото
                 </p>
                 <p className="text-sm" style={{ color: '#26251E', opacity: 0.6 }}>
