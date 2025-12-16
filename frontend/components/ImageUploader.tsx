@@ -100,12 +100,14 @@ export default function ImageUploader({
         onClick={() => {
           if (!isProcessing) inputRef.current?.click()
         }}
-        className={`upload-zone border-2 border-dashed rounded-2xl p-12 sm:p-14 text-center transition cursor-pointer ${
+        className={`upload-zone border-2 border-dashed rounded-2xl text-center transition cursor-pointer ${
           isDragging || isHover ? 'scale-[1.01]' : ''
         } ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
         style={{
           borderColor: isDragging || isHover ? '#26251E' : 'rgba(38, 37, 30, 0.2)',
-          background: '#fff'
+          background: '#fff',
+          minHeight: '380px',
+          padding: '64px 80px'
         }}
       >
         <input
