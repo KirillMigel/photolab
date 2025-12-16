@@ -32,7 +32,7 @@ export default function Home() {
       </header>
 
       {/* Hero Section */}
-      <section className="max-w-4xl mx-auto px-8 pt-16 pb-12 text-center">
+      <section className="max-w-4xl mx-auto px-8 pt-16 pb-8 text-center">
         <h2
           className="mb-4"
           style={{
@@ -63,16 +63,18 @@ export default function Home() {
       </section>
 
       {/* Main Content */}
-      <div className="max-w-3xl mx-auto px-8 pb-20">
+      <div className="max-w-5xl mx-auto px-8 pb-12 -mt-4">
         <div
           className="rounded-3xl overflow-hidden"
           style={{
-            backgroundImage: 'url(/images/bg-upload.jpg)',
+            backgroundImage: 'url("/images/Group 3-2.png")',
             backgroundSize: 'cover',
-            backgroundPosition: 'center'
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            minHeight: '480px'
           }}
         >
-          <div className="px-6 sm:px-10 pt-8 pb-10">
+          <div className="px-6 sm:px-10 pt-6 pb-8 h-full flex items-center justify-center">
             <ImageUploader
               onImageSelect={setOriginalImage}
               onProcessed={setProcessedImage}
