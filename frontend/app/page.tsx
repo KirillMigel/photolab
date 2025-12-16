@@ -65,14 +65,18 @@ export default function Home() {
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-8 pb-12 -mt-8">
         <div
-          className="rounded-3xl overflow-hidden"
+          className="overflow-hidden"
           style={{
             backgroundImage: 'url("/images/bg-upload.png")',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',
             minHeight: '580px',
-            padding: '80px'
+            padding: '80px',
+            borderRadius: '12px',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center'
           }}
         >
           <ImageUploader
