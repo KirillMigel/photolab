@@ -1,19 +1,22 @@
-import { removeBackground as imglyRemoveBackground } from '@imgly/background-removal'
-
 // Удаление фона происходит полностью в браузере через WebAssembly
-// Никакого бэкенда не требуется - бесплатно и без лимитов!
+// Библиотека загружается динамически только на клиенте
 
 export const removeBackground = async (
   file: File,
   _mode: 'quality' | 'fast' = 'quality'
 ): Promise<string> => {
+  // @ts-ignore — загружаем внешнюю ESM-библиотеку с CDN, у неё нет типов
+  const { removeBackground: imglyRemoveBackground } = await import(
+    /* webpackIgnore: true */ 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/dist/background-removal.esm.js'
+  )
+  
   // Конвертируем File в Blob URL для imgly
   const imageUrl = URL.createObjectURL(file)
   
   try {
     // Удаляем фон в браузере
     const blob = await imglyRemoveBackground(imageUrl, {
-      model: 'medium', // 'small' | 'medium' | 'large'
+      model: 'medium',
       output: {
         format: 'image/png',
         quality: 0.8,
@@ -28,12 +31,10 @@ export const removeBackground = async (
       reader.readAsDataURL(blob)
     })
   } finally {
-    // Освобождаем память
     URL.revokeObjectURL(imageUrl)
   }
 }
 
-// Batch обработка - обрабатываем файлы последовательно в браузере
 export const batchRemoveBackground = async (
   files: File[],
   mode: 'quality' | 'fast' = 'quality'
