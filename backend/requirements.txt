@@ -7,5 +7,5 @@ rq==1.16.2
 pydantic==2.8.2
 pydantic-settings==2.4.0
 rembg==2.0.57
-onnxruntime==1.15.1
+onnxruntime==1.17.1
 
