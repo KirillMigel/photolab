@@ -108,7 +108,7 @@ export default function ImageUploader({
           background: '#fff',
           minHeight: '380px',
           padding: '60px 80px',
-          maxWidth: '600px',
+          maxWidth: '640px',
           width: '100%',
           display: 'flex',
           flexDirection: 'column',
