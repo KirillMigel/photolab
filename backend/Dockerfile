@@ -8,11 +8,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libjpeg-dev \
     zlib1g-dev \
     libgomp1 \
+    execstack \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt \
     && pip install --no-cache-dir rembg onnxruntime
+
+# Fix onnxruntime executable stack flag for hardened kernels
+RUN execstack -c /usr/local/lib/python3.11/site-packages/onnxruntime/capi/onnxruntime_pybind11_state*.so || true
 
 COPY . /app
 
