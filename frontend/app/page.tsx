@@ -67,7 +67,7 @@ export default function Home() {
         <div
           className="overflow-hidden"
           style={{
-            backgroundImage: 'url("/images/bg-upload2.png")',
+            backgroundImage: 'url("/images/bg-upload3.png")',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat',

@@ -100,7 +100,7 @@ export default function ImageUploader({
         onClick={() => {
           if (!isProcessing) inputRef.current?.click()
         }}
-        className={`upload-zone border-2 border-dashed rounded-2xl text-center transition cursor-pointer ${
+        className={`upload-zone border-2 border-dashed rounded-lg text-center transition cursor-pointer ${
           isDragging || isHover ? 'scale-[1.01]' : ''
         } ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}
         style={{
@@ -140,7 +140,7 @@ export default function ImageUploader({
                 <img src="/images/upload.svg" alt="Upload" className="w-12 h-12" style={{ opacity: 0.4 }} />
               </div>
               
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <p
                   className="text-base font-medium"
                   style={{ color: isHover ? '#FC8C1D' : '#26251E' }}
