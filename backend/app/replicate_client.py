@@ -28,11 +28,18 @@ async def remove_background(image_bytes: bytes, mode: ModelMode = "quality") -> 
     Calls Replicate model and returns PNG bytes.
     """
     model = _select_model(mode)
+    
+    # Log token (masked) for debugging
+    token = settings.replicate_api_token
+    masked_token = f"{token[:8]}...{token[-4:]}" if len(token) > 12 else "***"
+    logger.info(f"Using Replicate token: {masked_token}")
 
     def _run_sync() -> str | list[str] | None:
         try:
             logger.info(f"Calling Replicate.run for model: {model}")
-            result = replicate.run(
+            # Try with version-specific model
+            client = replicate.Client(api_token=settings.replicate_api_token)
+            result = client.run(
                 model,
                 input={
                     "image": io.BytesIO(image_bytes),
