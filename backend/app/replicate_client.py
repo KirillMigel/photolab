@@ -27,17 +27,18 @@ async def remove_background(image_bytes: bytes, mode: ModelMode = "quality") -> 
     """
     Calls Replicate model and returns PNG bytes.
     """
-    model = _select_model(mode)
+    # Use specific working model version
+    model = "pollinations/modnet"  # Proven to work, 1.9M runs
     
-    # Log token (masked) for debugging
+    # Debug output
     token = settings.replicate_api_token
     masked_token = f"{token[:8]}...{token[-4:]}" if len(token) > 12 else "***"
-    logger.info(f"Using Replicate token: {masked_token}")
+    print(f"[DEBUG] Using Replicate token: {masked_token}")
+    print(f"[DEBUG] Using model: {model}")
 
     def _run_sync() -> str | list[str] | None:
         try:
-            logger.info(f"Calling Replicate.run for model: {model}")
-            # Try with version-specific model
+            print(f"[DEBUG] Calling Replicate.run...")
             client = replicate.Client(api_token=settings.replicate_api_token)
             result = client.run(
                 model,
@@ -45,9 +46,10 @@ async def remove_background(image_bytes: bytes, mode: ModelMode = "quality") -> 
                     "image": io.BytesIO(image_bytes),
                 },
             )
-            logger.info(f"Replicate.run returned: {result}")
+            print(f"[DEBUG] Replicate.run succeeded, result type: {type(result)}")
             return result
         except Exception as e:
+            print(f"[DEBUG] Error calling Replicate.run: {e}")
             logger.error(f"Error calling Replicate.run: {e}", exc_info=True)
             raise
 
