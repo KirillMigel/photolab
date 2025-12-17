@@ -5,9 +5,9 @@ export const removeBackground = async (
   file: File,
   _mode: 'quality' | 'fast' = 'quality'
 ): Promise<string> => {
-  // @ts-ignore — загружаем внешнюю ESM-библиотеку с CDN
+  // @ts-ignore — загружаем библиотеку с esm.sh CDN (лучше работает с зависимостями)
   const { removeBackground: imglyRemoveBackground } = await import(
-    /* webpackIgnore: true */ 'https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.4.5/+esm'
+    /* webpackIgnore: true */ 'https://esm.sh/@imgly/background-removal@1.4.5?bundle'
   )
   
   // Конвертируем File в Blob URL для imgly
