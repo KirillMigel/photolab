@@ -73,7 +73,7 @@ export default function Home() {
             backgroundRepeat: 'no-repeat',
             minHeight: '580px',
             padding: '80px',
-            borderRadius: '12px',
+            borderRadius: '4px',
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center'

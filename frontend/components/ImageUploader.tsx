@@ -107,9 +107,13 @@ export default function ImageUploader({
           borderColor: isDragging || isHover ? '#26251E' : 'rgba(38, 37, 30, 0.2)',
           background: '#fff',
           minHeight: '380px',
-          padding: '60px',
-          maxWidth: '680px',
-          width: '100%'
+          padding: '60px 80px',
+          maxWidth: '600px',
+          width: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center'
         }}
       >
         <input
