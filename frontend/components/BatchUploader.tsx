@@ -1,12 +1,11 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import { batchRemoveBackground, getBatchStatus, BatchStatusResponse } from '@/lib/api'
+import { batchRemoveBackground } from '@/lib/api'
 
 interface BatchResult {
   filename: string
-  object_key: string
-  download_url: string
+  data_url: string
 }
 
 export default function BatchUploader() {
@@ -14,8 +13,7 @@ export default function BatchUploader() {
   const [isDragging, setIsDragging] = useState(false)
   const [mode, setMode] = useState<'quality' | 'fast'>('quality')
   const [isProcessing, setIsProcessing] = useState(false)
-  const [jobId, setJobId] = useState<string | null>(null)
-  const [status, setStatus] = useState<BatchStatusResponse | null>(null)
+  const [results, setResults] = useState<BatchResult[]>([])
   const [error, setError] = useState<string | null>(null)
 
   const handleFiles = useCallback((newFiles: FileList | File[]) => {
@@ -65,29 +63,12 @@ export default function BatchUploader() {
 
     setIsProcessing(true)
     setError(null)
-    setStatus(null)
+    setResults([])
 
     try {
       const response = await batchRemoveBackground(files, mode)
-      setJobId(response.job_id)
-      
-      // Poll for status
-      const pollInterval = setInterval(async () => {
-        try {
-          const statusRes = await getBatchStatus(response.job_id)
-          setStatus(statusRes)
-
-          if (statusRes.status === 'finished' || statusRes.status === 'failed') {
-            clearInterval(pollInterval)
-            setIsProcessing(false)
-          }
-        } catch (err) {
-          console.error('Poll error:', err)
-          clearInterval(pollInterval)
-          setIsProcessing(false)
-          setError('Ошибка получения статуса')
-        }
-      }, 2000)
+      setResults(response)
+      setIsProcessing(false)
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Ошибка обработки')
       setIsProcessing(false)
@@ -95,8 +76,8 @@ export default function BatchUploader() {
   }
 
   const downloadAll = () => {
-    if (!status?.results) return
-    status.results.forEach((result) => {
+    if (results.length === 0) return
+    results.forEach((result) => {
       const link = document.createElement('a')
       link.href = result.data_url
       link.download = result.filename
@@ -178,7 +159,7 @@ export default function BatchUploader() {
             <h3 className="font-semibold text-gray-800">
               Файлов: {files.length}
             </h3>
-            {!isProcessing && !status && (
+            {!isProcessing && results.length === 0 && (
               <button
                 onClick={processBatch}
                 className="px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition"
@@ -200,7 +181,7 @@ export default function BatchUploader() {
                 <span className="text-xs text-gray-500 mr-2">
                   {(file.size / 1024 / 1024).toFixed(2)} МБ
                 </span>
-                {!isProcessing && !status && (
+                {!isProcessing && results.length === 0 && (
                   <button
                     onClick={() => removeFile(index)}
                     className="text-red-500 hover:text-red-700 text-sm"
@@ -215,37 +196,25 @@ export default function BatchUploader() {
       )}
 
       {/* Progress */}
-      {isProcessing && status && (
+      {isProcessing && (
         <div className="bg-white rounded-xl shadow-sm p-6">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-gray-700">
-                Прогресс: {status.progress || 'Начинаем...'}
+                Обрабатываем изображения...
               </span>
-              <span className="text-sm text-gray-500">
-                {status.status === 'started' ? 'Обработка...' : 'В очереди...'}
-              </span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-primary-500 h-2 rounded-full transition-all"
-                style={{
-                  width: status.progress
-                    ? `${(parseInt(status.progress.split('/')[0]) / parseInt(status.progress.split('/')[1])) * 100}%`
-                    : '0%',
-                }}
-              />
+              <div className="animate-spin h-5 w-5 border-2 border-primary-500 border-t-transparent rounded-full"></div>
             </div>
           </div>
         </div>
       )}
 
       {/* Results */}
-      {status?.status === 'finished' && status.results && (
+      {results.length > 0 && (
         <div className="bg-white rounded-xl shadow-lg p-6 space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-800">
-              ✅ Готово! ({status.results.length} файлов)
+              ✅ Готово! ({results.length} файлов)
             </h3>
             <button
               onClick={downloadAll}
@@ -256,7 +225,7 @@ export default function BatchUploader() {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {status.results.map((result, index) => (
+            {results.map((result, index) => (
               <div key={index} className="space-y-2">
                 <div className="relative rounded-lg overflow-hidden bg-checker aspect-square">
                   <img

@@ -16,7 +16,7 @@ export const removeBackground = async (
   try {
     // Удаляем фон в браузере
     const blob = await imglyRemoveBackground(imageUrl, {
-      model: 'medium',
+      model: 'isnet',
       output: {
         format: 'image/png',
         quality: 0.8,
