@@ -17,12 +17,17 @@ export async function POST(request: NextRequest) {
     const base64 = Buffer.from(bytes).toString('base64')
     const dataUrl = `data:${file.type};base64,${base64}`
 
-    // Шаг 1: Создаём задачу на удаление фона
+    console.log('Sending request to Kie.ai...')
+    console.log('File type:', file.type)
+    console.log('File size:', file.size)
+
+    // Создаём задачу на удаление фона
     const createTaskResponse = await fetch(`${KIE_API_BASE}/api/v1/jobs/createTask`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${KIE_API_KEY}`,
+        'X-API-Key': KIE_API_KEY,
       },
       body: JSON.stringify({
         model: 'recraft/remove-background',
@@ -32,51 +37,89 @@ export async function POST(request: NextRequest) {
       }),
     })
 
+    const responseText = await createTaskResponse.text()
+    console.log('Kie.ai response status:', createTaskResponse.status)
+    console.log('Kie.ai response:', responseText)
+
     if (!createTaskResponse.ok) {
-      const errorText = await createTaskResponse.text()
-      console.error('Kie.ai createTask error:', errorText)
       return NextResponse.json(
-        { error: `API error: ${createTaskResponse.status}` },
+        { error: `Kie.ai API error: ${createTaskResponse.status} - ${responseText}` },
         { status: createTaskResponse.status }
       )
     }
 
-    const taskData = await createTaskResponse.json()
-    const taskId = taskData.data?.id || taskData.id
-
-    if (!taskId) {
-      console.error('No task ID in response:', taskData)
-      return NextResponse.json({ error: 'No task ID returned' }, { status: 500 })
+    let taskData
+    try {
+      taskData = JSON.parse(responseText)
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid JSON response from Kie.ai' },
+        { status: 500 }
+      )
     }
 
-    // Шаг 2: Ждём результат (polling)
+    console.log('Parsed task data:', JSON.stringify(taskData, null, 2))
+
+    // Пробуем разные варианты получения task ID
+    const taskId = taskData.data?.id || taskData.data?.taskId || taskData.id || taskData.taskId || taskData.job_id
+
+    if (!taskId) {
+      // Может быть синхронный ответ с результатом сразу
+      const directResult = taskData.data?.output || taskData.output || taskData.data?.result || taskData.result || taskData.data?.image || taskData.image
+      
+      if (directResult) {
+        console.log('Got direct result:', directResult)
+        return NextResponse.json({ success: true, url: directResult })
+      }
+      
+      return NextResponse.json(
+        { error: 'No task ID or result in response', response: taskData },
+        { status: 500 }
+      )
+    }
+
+    console.log('Task ID:', taskId)
+
+    // Ждём результат (polling)
     let result = null
     let attempts = 0
-    const maxAttempts = 60 // 60 секунд максимум
+    const maxAttempts = 60
 
     while (attempts < maxAttempts) {
-      await new Promise(resolve => setTimeout(resolve, 1000)) // Ждём 1 секунду
+      await new Promise(resolve => setTimeout(resolve, 1000))
       
       const statusResponse = await fetch(`${KIE_API_BASE}/api/v1/jobs/${taskId}`, {
         headers: {
           'Authorization': `Bearer ${KIE_API_KEY}`,
+          'X-API-Key': KIE_API_KEY,
         },
       })
+
+      const statusText = await statusResponse.text()
+      console.log(`Poll attempt ${attempts + 1}, status:`, statusText)
 
       if (!statusResponse.ok) {
         attempts++
         continue
       }
 
-      const statusData = await statusResponse.json()
-      const status = statusData.data?.status || statusData.status
+      let statusData
+      try {
+        statusData = JSON.parse(statusText)
+      } catch {
+        attempts++
+        continue
+      }
 
-      if (status === 'completed' || status === 'succeeded') {
-        result = statusData.data?.output || statusData.output
+      const status = statusData.data?.status || statusData.status
+      console.log('Job status:', status)
+
+      if (status === 'completed' || status === 'succeeded' || status === 'success') {
+        result = statusData.data?.output || statusData.output || statusData.data?.result || statusData.result || statusData.data?.image || statusData.image
         break
       } else if (status === 'failed' || status === 'error') {
         return NextResponse.json(
-          { error: 'Processing failed' },
+          { error: 'Processing failed', details: statusData },
           { status: 500 }
         )
       }
@@ -89,7 +132,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Возвращаем URL результата
-    const outputUrl = typeof result === 'string' ? result : result.image || result.url || result[0]
+    const outputUrl = typeof result === 'string' ? result : (result.image || result.url || result[0])
+    console.log('Final output URL:', outputUrl)
     
     return NextResponse.json({ 
       success: true, 
@@ -99,9 +143,8 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Remove background error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: `Internal server error: ${error}` },
       { status: 500 }
     )
   }
 }
-
