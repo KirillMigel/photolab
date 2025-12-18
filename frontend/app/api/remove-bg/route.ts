@@ -12,29 +12,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No image provided' }, { status: 400 })
     }
 
-    // Конвертируем файл в base64
-    const bytes = await file.arrayBuffer()
-    const base64 = Buffer.from(bytes).toString('base64')
-    const dataUrl = `data:${file.type};base64,${base64}`
-
-    console.log('Sending request to Kie.ai...')
+    console.log('File name:', file.name)
     console.log('File type:', file.type)
     console.log('File size:', file.size)
+
+    // Создаём новый FormData для отправки в Kie.ai
+    const kieFormData = new FormData()
+    kieFormData.append('model', 'recraft/remove-background')
+    kieFormData.append('image', file, file.name || 'image.png')
+
+    console.log('Sending request to Kie.ai with FormData...')
 
     // Создаём задачу на удаление фона
     const createTaskResponse = await fetch(`${KIE_API_BASE}/api/v1/jobs/createTask`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
         'Authorization': `Bearer ${KIE_API_KEY}`,
         'X-API-Key': KIE_API_KEY,
       },
-      body: JSON.stringify({
-        model: 'recraft/remove-background',
-        input: {
-          image: dataUrl,
-        },
-      }),
+      body: kieFormData,
     })
 
     const responseText = await createTaskResponse.text()
@@ -60,12 +56,20 @@ export async function POST(request: NextRequest) {
 
     console.log('Parsed task data:', JSON.stringify(taskData, null, 2))
 
+    // Проверяем на ошибку в ответе
+    if (taskData.code && taskData.code !== 200 && taskData.code !== 0) {
+      return NextResponse.json(
+        { error: taskData.msg || 'API error', details: taskData },
+        { status: 500 }
+      )
+    }
+
     // Пробуем разные варианты получения task ID
-    const taskId = taskData.data?.id || taskData.data?.taskId || taskData.id || taskData.taskId || taskData.job_id
+    const taskId = taskData.data?.id || taskData.data?.taskId || taskData.data?.job_id || taskData.id || taskData.taskId || taskData.job_id
 
     if (!taskId) {
       // Может быть синхронный ответ с результатом сразу
-      const directResult = taskData.data?.output || taskData.output || taskData.data?.result || taskData.result || taskData.data?.image || taskData.image
+      const directResult = taskData.data?.output || taskData.output || taskData.data?.result || taskData.result || taskData.data?.image || taskData.image || taskData.data?.url || taskData.url
       
       if (directResult) {
         console.log('Got direct result:', directResult)
@@ -96,7 +100,7 @@ export async function POST(request: NextRequest) {
       })
 
       const statusText = await statusResponse.text()
-      console.log(`Poll attempt ${attempts + 1}, status:`, statusText)
+      console.log(`Poll attempt ${attempts + 1}:`, statusText.substring(0, 200))
 
       if (!statusResponse.ok) {
         attempts++
@@ -114,8 +118,8 @@ export async function POST(request: NextRequest) {
       const status = statusData.data?.status || statusData.status
       console.log('Job status:', status)
 
-      if (status === 'completed' || status === 'succeeded' || status === 'success') {
-        result = statusData.data?.output || statusData.output || statusData.data?.result || statusData.result || statusData.data?.image || statusData.image
+      if (status === 'completed' || status === 'succeeded' || status === 'success' || status === 'done') {
+        result = statusData.data?.output || statusData.output || statusData.data?.result || statusData.result || statusData.data?.image || statusData.image || statusData.data?.url || statusData.url
         break
       } else if (status === 'failed' || status === 'error') {
         return NextResponse.json(
