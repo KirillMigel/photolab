@@ -1,40 +1,47 @@
-// Удаление фона происходит полностью в браузере через WebAssembly
-// Библиотека загружается динамически только на клиенте
+// API для удаления фона через Kie.ai (Recraft)
 
 export const removeBackground = async (
   file: File,
   _mode: 'quality' | 'fast' = 'quality'
 ): Promise<string> => {
-  // @ts-ignore — загружаем библиотеку с esm.sh CDN (лучше работает с зависимостями)
-  const { removeBackground: imglyRemoveBackground } = await import(
-    /* webpackIgnore: true */ 'https://esm.sh/@imgly/background-removal@1.4.5?bundle'
-  )
+  const formData = new FormData()
+  formData.append('image', file)
+
+  const response = await fetch('/api/remove-bg', {
+    method: 'POST',
+    body: formData,
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }))
+    throw new Error(error.error || 'Failed to remove background')
+  }
+
+  const data = await response.json()
   
-  // Конвертируем File в Blob URL для imgly
-  const imageUrl = URL.createObjectURL(file)
-  
-  try {
-    // Удаляем фон в браузере
-    const blob = await imglyRemoveBackground(imageUrl, {
-      model: 'medium',
-      output: {
-        format: 'image/png',
-        quality: 0.8,
-      },
-    })
+  // Если API вернул URL изображения, конвертируем в data URL
+  if (data.url) {
+    // Если это уже data URL, возвращаем как есть
+    if (data.url.startsWith('data:')) {
+      return data.url
+    }
     
-    // Конвертируем результат в data URL
+    // Иначе загружаем изображение и конвертируем в data URL
+    const imageResponse = await fetch(data.url)
+    const blob = await imageResponse.blob()
+    
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
       reader.onloadend = () => resolve(reader.result as string)
       reader.onerror = reject
       reader.readAsDataURL(blob)
     })
-  } finally {
-    URL.revokeObjectURL(imageUrl)
   }
+
+  throw new Error('No result URL in response')
 }
 
+// Batch обработка - обрабатываем файлы последовательно
 export const batchRemoveBackground = async (
   files: File[],
   mode: 'quality' | 'fast' = 'quality'
