@@ -12,51 +12,93 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No image provided' }, { status: 400 })
     }
 
+    // Конвертируем файл в base64 URL
+    const bytes = await file.arrayBuffer()
+    const base64 = Buffer.from(bytes).toString('base64')
+    
+    // Определяем MIME тип
+    let mimeType = file.type
+    if (!mimeType || mimeType === 'application/octet-stream') {
+      // Пробуем определить по расширению
+      const name = file.name.toLowerCase()
+      if (name.endsWith('.png')) mimeType = 'image/png'
+      else if (name.endsWith('.jpg') || name.endsWith('.jpeg')) mimeType = 'image/jpeg'
+      else if (name.endsWith('.webp')) mimeType = 'image/webp'
+      else mimeType = 'image/png' // default
+    }
+
     console.log('File name:', file.name)
-    console.log('File type:', file.type)
+    console.log('File type:', mimeType)
     console.log('File size:', file.size)
 
-    // Создаём новый FormData для отправки в Kie.ai
-    const kieFormData = new FormData()
-    kieFormData.append('model', 'recraft/remove-background')
-    kieFormData.append('image', file, file.name || 'image.png')
+    // Пробуем JSON формат с input объектом
+    const requestBody = {
+      model: 'recraft/remove-background',
+      input: {
+        image: `data:${mimeType};base64,${base64}`
+      }
+    }
 
-    console.log('Sending request to Kie.ai with FormData...')
+    console.log('Sending JSON request to Kie.ai...')
 
-    // Создаём задачу на удаление фона
     const createTaskResponse = await fetch(`${KIE_API_BASE}/api/v1/jobs/createTask`, {
       method: 'POST',
       headers: {
+        'Content-Type': 'application/json',
         'Authorization': `Bearer ${KIE_API_KEY}`,
         'X-API-Key': KIE_API_KEY,
       },
-      body: kieFormData,
+      body: JSON.stringify(requestBody),
     })
 
     const responseText = await createTaskResponse.text()
     console.log('Kie.ai response status:', createTaskResponse.status)
     console.log('Kie.ai response:', responseText)
 
-    if (!createTaskResponse.ok) {
-      return NextResponse.json(
-        { error: `Kie.ai API error: ${createTaskResponse.status} - ${responseText}` },
-        { status: createTaskResponse.status }
-      )
-    }
-
     let taskData
     try {
       taskData = JSON.parse(responseText)
     } catch {
       return NextResponse.json(
-        { error: 'Invalid JSON response from Kie.ai' },
+        { error: 'Invalid JSON response', raw: responseText },
         { status: 500 }
       )
     }
 
-    console.log('Parsed task data:', JSON.stringify(taskData, null, 2))
+    // Проверяем на ошибку
+    if (taskData.code && taskData.code !== 200 && taskData.code !== 0) {
+      // Пробуем альтернативный формат - просто image без input wrapper
+      console.log('First format failed, trying alternative...')
+      
+      const altRequestBody = {
+        model: 'recraft/remove-background',
+        image: `data:${mimeType};base64,${base64}`
+      }
 
-    // Проверяем на ошибку в ответе
+      const altResponse = await fetch(`${KIE_API_BASE}/api/v1/jobs/createTask`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${KIE_API_KEY}`,
+          'X-API-Key': KIE_API_KEY,
+        },
+        body: JSON.stringify(altRequestBody),
+      })
+
+      const altText = await altResponse.text()
+      console.log('Alternative response:', altText)
+
+      try {
+        taskData = JSON.parse(altText)
+      } catch {
+        return NextResponse.json(
+          { error: 'Both formats failed', response1: responseText, response2: altText },
+          { status: 500 }
+        )
+      }
+    }
+
+    // Проверяем на ошибку снова
     if (taskData.code && taskData.code !== 200 && taskData.code !== 0) {
       return NextResponse.json(
         { error: taskData.msg || 'API error', details: taskData },
@@ -64,91 +106,57 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Пробуем разные варианты получения task ID
-    const taskId = taskData.data?.id || taskData.data?.taskId || taskData.data?.job_id || taskData.id || taskData.taskId || taskData.job_id
+    // Получаем task ID
+    const taskId = taskData.data?.id || taskData.data?.taskId || taskData.id || taskData.taskId
 
+    // Может быть синхронный ответ
     if (!taskId) {
-      // Может быть синхронный ответ с результатом сразу
-      const directResult = taskData.data?.output || taskData.output || taskData.data?.result || taskData.result || taskData.data?.image || taskData.image || taskData.data?.url || taskData.url
-      
+      const directResult = taskData.data?.output || taskData.output || taskData.data?.image || taskData.image || taskData.data?.url || taskData.url
       if (directResult) {
-        console.log('Got direct result:', directResult)
         return NextResponse.json({ success: true, url: directResult })
       }
-      
       return NextResponse.json(
-        { error: 'No task ID or result in response', response: taskData },
+        { error: 'No task ID or result', response: taskData },
         { status: 500 }
       )
     }
 
     console.log('Task ID:', taskId)
 
-    // Ждём результат (polling)
-    let result = null
-    let attempts = 0
-    const maxAttempts = 60
-
-    while (attempts < maxAttempts) {
-      await new Promise(resolve => setTimeout(resolve, 1000))
+    // Polling для результата
+    for (let i = 0; i < 60; i++) {
+      await new Promise(r => setTimeout(r, 1000))
       
-      const statusResponse = await fetch(`${KIE_API_BASE}/api/v1/jobs/${taskId}`, {
+      const statusRes = await fetch(`${KIE_API_BASE}/api/v1/jobs/${taskId}`, {
         headers: {
           'Authorization': `Bearer ${KIE_API_KEY}`,
           'X-API-Key': KIE_API_KEY,
         },
       })
 
-      const statusText = await statusResponse.text()
-      console.log(`Poll attempt ${attempts + 1}:`, statusText.substring(0, 200))
+      if (!statusRes.ok) continue
 
-      if (!statusResponse.ok) {
-        attempts++
-        continue
-      }
-
-      let statusData
-      try {
-        statusData = JSON.parse(statusText)
-      } catch {
-        attempts++
-        continue
-      }
+      const statusData = await statusRes.json().catch(() => null)
+      if (!statusData) continue
 
       const status = statusData.data?.status || statusData.status
-      console.log('Job status:', status)
+      console.log(`Poll ${i + 1}: status = ${status}`)
 
-      if (status === 'completed' || status === 'succeeded' || status === 'success' || status === 'done') {
-        result = statusData.data?.output || statusData.output || statusData.data?.result || statusData.result || statusData.data?.image || statusData.image || statusData.data?.url || statusData.url
-        break
-      } else if (status === 'failed' || status === 'error') {
-        return NextResponse.json(
-          { error: 'Processing failed', details: statusData },
-          { status: 500 }
-        )
+      if (['completed', 'succeeded', 'success', 'done'].includes(status)) {
+        const result = statusData.data?.output || statusData.output || statusData.data?.image || statusData.image
+        const url = typeof result === 'string' ? result : result?.image || result?.url || result?.[0]
+        return NextResponse.json({ success: true, url })
       }
 
-      attempts++
+      if (['failed', 'error'].includes(status)) {
+        return NextResponse.json({ error: 'Processing failed', details: statusData }, { status: 500 })
+      }
     }
 
-    if (!result) {
-      return NextResponse.json({ error: 'Timeout waiting for result' }, { status: 504 })
-    }
-
-    // Возвращаем URL результата
-    const outputUrl = typeof result === 'string' ? result : (result.image || result.url || result[0])
-    console.log('Final output URL:', outputUrl)
-    
-    return NextResponse.json({ 
-      success: true, 
-      url: outputUrl 
-    })
+    return NextResponse.json({ error: 'Timeout' }, { status: 504 })
 
   } catch (error) {
-    console.error('Remove background error:', error)
-    return NextResponse.json(
-      { error: `Internal server error: ${error}` },
-      { status: 500 }
-    )
+    console.error('Error:', error)
+    return NextResponse.json({ error: String(error) }, { status: 500 })
   }
 }
