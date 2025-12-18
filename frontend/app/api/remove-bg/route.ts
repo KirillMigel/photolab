@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const KIE_API_KEY = process.env.KIE_API_KEY || 'd889d48eead533eba92ea30c1564077d'
-const KIE_API_BASE = 'https://api.kie.ai'
+const REMOVE_BG_API_KEY = process.env.REMOVE_BG_API_KEY || 'GtSKYXFmAtxHjSvVQxcgD8db'
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,151 +11,62 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No image provided' }, { status: 400 })
     }
 
-    // Конвертируем файл в base64 URL
-    const bytes = await file.arrayBuffer()
-    const base64 = Buffer.from(bytes).toString('base64')
-    
-    // Определяем MIME тип
-    let mimeType = file.type
-    if (!mimeType || mimeType === 'application/octet-stream') {
-      // Пробуем определить по расширению
-      const name = file.name.toLowerCase()
-      if (name.endsWith('.png')) mimeType = 'image/png'
-      else if (name.endsWith('.jpg') || name.endsWith('.jpeg')) mimeType = 'image/jpeg'
-      else if (name.endsWith('.webp')) mimeType = 'image/webp'
-      else mimeType = 'image/png' // default
-    }
-
+    console.log('Processing with Remove.bg...')
     console.log('File name:', file.name)
-    console.log('File type:', mimeType)
+    console.log('File type:', file.type)
     console.log('File size:', file.size)
 
-    // Пробуем JSON формат с input объектом
-    const requestBody = {
-      model: 'recraft/remove-background',
-      input: {
-        image: `data:${mimeType};base64,${base64}`
-      }
-    }
+    // Создаём FormData для Remove.bg API
+    const removeBgFormData = new FormData()
+    removeBgFormData.append('image_file', file)
+    removeBgFormData.append('size', 'auto') // auto, preview, small, regular, medium, hd, full, 4k
 
-    console.log('Sending JSON request to Kie.ai...')
-
-    const createTaskResponse = await fetch(`${KIE_API_BASE}/api/v1/jobs/createTask`, {
+    // Отправляем запрос к Remove.bg
+    const response = await fetch('https://api.remove.bg/v1.0/removebg', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${KIE_API_KEY}`,
-        'X-API-Key': KIE_API_KEY,
+        'X-Api-Key': REMOVE_BG_API_KEY,
       },
-      body: JSON.stringify(requestBody),
+      body: removeBgFormData,
     })
 
-    const responseText = await createTaskResponse.text()
-    console.log('Kie.ai response status:', createTaskResponse.status)
-    console.log('Kie.ai response:', responseText)
+    console.log('Remove.bg response status:', response.status)
 
-    let taskData
-    try {
-      taskData = JSON.parse(responseText)
-    } catch {
-      return NextResponse.json(
-        { error: 'Invalid JSON response', raw: responseText },
-        { status: 500 }
-      )
-    }
-
-    // Проверяем на ошибку
-    if (taskData.code && taskData.code !== 200 && taskData.code !== 0) {
-      // Пробуем альтернативный формат - просто image без input wrapper
-      console.log('First format failed, trying alternative...')
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Remove.bg error:', errorText)
       
-      const altRequestBody = {
-        model: 'recraft/remove-background',
-        image: `data:${mimeType};base64,${base64}`
-      }
-
-      const altResponse = await fetch(`${KIE_API_BASE}/api/v1/jobs/createTask`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${KIE_API_KEY}`,
-          'X-API-Key': KIE_API_KEY,
-        },
-        body: JSON.stringify(altRequestBody),
-      })
-
-      const altText = await altResponse.text()
-      console.log('Alternative response:', altText)
-
+      let errorMessage = 'Failed to remove background'
       try {
-        taskData = JSON.parse(altText)
+        const errorJson = JSON.parse(errorText)
+        errorMessage = errorJson.errors?.[0]?.title || errorJson.error || errorMessage
       } catch {
-        return NextResponse.json(
-          { error: 'Both formats failed', response1: responseText, response2: altText },
-          { status: 500 }
-        )
+        errorMessage = errorText || errorMessage
       }
-    }
-
-    // Проверяем на ошибку снова
-    if (taskData.code && taskData.code !== 200 && taskData.code !== 0) {
-      return NextResponse.json(
-        { error: taskData.msg || 'API error', details: taskData },
-        { status: 500 }
-      )
-    }
-
-    // Получаем task ID
-    const taskId = taskData.data?.id || taskData.data?.taskId || taskData.id || taskData.taskId
-
-    // Может быть синхронный ответ
-    if (!taskId) {
-      const directResult = taskData.data?.output || taskData.output || taskData.data?.image || taskData.image || taskData.data?.url || taskData.url
-      if (directResult) {
-        return NextResponse.json({ success: true, url: directResult })
-      }
-      return NextResponse.json(
-        { error: 'No task ID or result', response: taskData },
-        { status: 500 }
-      )
-    }
-
-    console.log('Task ID:', taskId)
-
-    // Polling для результата
-    for (let i = 0; i < 60; i++) {
-      await new Promise(r => setTimeout(r, 1000))
       
-      const statusRes = await fetch(`${KIE_API_BASE}/api/v1/jobs/${taskId}`, {
-        headers: {
-          'Authorization': `Bearer ${KIE_API_KEY}`,
-          'X-API-Key': KIE_API_KEY,
-        },
-      })
-
-      if (!statusRes.ok) continue
-
-      const statusData = await statusRes.json().catch(() => null)
-      if (!statusData) continue
-
-      const status = statusData.data?.status || statusData.status
-      console.log(`Poll ${i + 1}: status = ${status}`)
-
-      if (['completed', 'succeeded', 'success', 'done'].includes(status)) {
-        const result = statusData.data?.output || statusData.output || statusData.data?.image || statusData.image
-        const url = typeof result === 'string' ? result : result?.image || result?.url || result?.[0]
-        return NextResponse.json({ success: true, url })
-      }
-
-      if (['failed', 'error'].includes(status)) {
-        return NextResponse.json({ error: 'Processing failed', details: statusData }, { status: 500 })
-      }
+      return NextResponse.json(
+        { error: errorMessage },
+        { status: response.status }
+      )
     }
 
-    return NextResponse.json({ error: 'Timeout' }, { status: 504 })
+    // Remove.bg возвращает PNG изображение напрямую
+    const imageBuffer = await response.arrayBuffer()
+    const base64 = Buffer.from(imageBuffer).toString('base64')
+    const dataUrl = `data:image/png;base64,${base64}`
+
+    console.log('Successfully processed image!')
+    
+    return NextResponse.json({ 
+      success: true, 
+      url: dataUrl 
+    })
 
   } catch (error) {
-    console.error('Error:', error)
-    return NextResponse.json({ error: String(error) }, { status: 500 })
+    console.error('Remove background error:', error)
+    return NextResponse.json(
+      { error: `Internal server error: ${error}` },
+      { status: 500 }
+    )
   }
 }
