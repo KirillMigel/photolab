@@ -2,9 +2,13 @@
 
 import { useState, useRef } from 'react'
 
+type AspectRatio = '3:2' | '2:3' | '1:1'
+type Mode = 'normal' | 'fun' | 'spicy'
+
 export default function Home() {
   const [prompt, setPrompt] = useState('')
-  const [duration, setDuration] = useState<'5' | '10' | '15'>('5')
+  const [aspectRatio, setAspectRatio] = useState<AspectRatio>('3:2')
+  const [mode, setMode] = useState<Mode>('normal')
   const [isGenerating, setIsGenerating] = useState(false)
   const [videoUrl, setVideoUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -26,7 +30,7 @@ export default function Home() {
       const response = await fetch('/api/generate-video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, duration, resolution: '1080p' }),
+        body: JSON.stringify({ prompt, aspectRatio, mode }),
       })
 
       const data = await response.json()
@@ -49,7 +53,7 @@ export default function Home() {
       const maxAttempts = 180
 
       while (attempts < maxAttempts) {
-        await new Promise(r => setTimeout(r, 1000))
+        await new Promise(r => setTimeout(r, 2000))
 
         const statusResponse = await fetch(`/api/generate-video/${taskId}`)
         const statusData = await statusResponse.json()
@@ -139,23 +143,23 @@ export default function Home() {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Введите для настройки видео..."
+                placeholder="Введите новый запрос..."
                 disabled={isGenerating}
                 className="flex-1 bg-transparent outline-none text-base"
                 style={{ color: '#26251E', fontFamily: 'Inter, sans-serif' }}
               />
               
-              {/* Duration Dropdown */}
+              {/* Aspect Ratio Dropdown */}
               <select
-                value={duration}
-                onChange={(e) => setDuration(e.target.value as '5' | '10' | '15')}
+                value={aspectRatio}
+                onChange={(e) => setAspectRatio(e.target.value as AspectRatio)}
                 disabled={isGenerating}
                 className="bg-gray-100 rounded-full px-3 py-2 text-sm border-0 outline-none cursor-pointer mr-2"
                 style={{ color: '#26251E', fontFamily: 'Inter, sans-serif' }}
               >
-                <option value="5">5 сек</option>
-                <option value="10">10 сек</option>
-                <option value="15">15 сек</option>
+                <option value="3:2">16:9</option>
+                <option value="2:3">9:16</option>
+                <option value="1:1">1:1</option>
               </select>
 
               {/* Generate Button */}
@@ -324,16 +328,17 @@ export default function Home() {
               style={{ color: '#26251E', fontFamily: 'Inter, sans-serif' }}
             />
             
+            {/* Aspect Ratio Selector */}
             <select
-              value={duration}
-              onChange={(e) => setDuration(e.target.value as '5' | '10' | '15')}
+              value={aspectRatio}
+              onChange={(e) => setAspectRatio(e.target.value as AspectRatio)}
               disabled={isGenerating}
               className="bg-gray-100 rounded-full px-4 py-2 text-sm border-0 outline-none cursor-pointer mr-2"
               style={{ color: '#26251E', fontFamily: 'Inter, sans-serif' }}
             >
-              <option value="5">5 сек</option>
-              <option value="10">10 сек</option>
-              <option value="15">15 сек</option>
+              <option value="3:2">16:9</option>
+              <option value="2:3">9:16</option>
+              <option value="1:1">1:1</option>
             </select>
 
             <button

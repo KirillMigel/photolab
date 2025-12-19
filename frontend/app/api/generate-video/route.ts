@@ -3,28 +3,28 @@ import { NextRequest, NextResponse } from 'next/server'
 const KIE_API_KEY = process.env.KIE_API_KEY || 'd889d48eead533eba92ea30c1564077d'
 const KIE_API_BASE = 'https://api.kie.ai'
 
-// Попробуем разные варианты названий модели
+// Grok Imagine для text-to-video
 const MODEL_NAMES = [
-  'wan2.6/text-to-video',
-  'wan-2.6/t2v',
-  'wan/2.6-text-to-video',
-  'alibaba/wan-2.6-t2v',
-  'wan-2.6-t2v',
-  'wan/t2v',
+  'grok-imagine',
+  'grok/imagine',
+  'grok-t2v',
+  'grok/t2v',
+  'xai/grok-imagine',
 ]
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { prompt, duration = '5', resolution = '1080p' } = body
+    const { prompt, aspectRatio = '3:2', mode = 'normal' } = body
 
     if (!prompt || prompt.trim().length === 0) {
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 })
     }
 
-    console.log('Generating video with Wan 2.6...')
+    console.log('Generating video with Grok Imagine...')
     console.log('Prompt:', prompt)
-    console.log('Duration:', duration)
+    console.log('Aspect Ratio:', aspectRatio)
+    console.log('Mode:', mode)
 
     let lastError = null
     let taskData = null
@@ -44,14 +44,14 @@ export async function POST(request: NextRequest) {
           model: modelName,
           input: {
             prompt: prompt,
-            duration: duration,
-            resolution: resolution,
+            aspect_ratio: aspectRatio,
+            mode: mode,
           },
         }),
       })
 
       const responseText = await createTaskResponse.text()
-      console.log(`Response for ${modelName}:`, responseText.substring(0, 200))
+      console.log(`Response for ${modelName}:`, responseText.substring(0, 300))
 
       try {
         taskData = JSON.parse(responseText)
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Если ошибка "page does not exist" - пробуем следующую модель
-      if (taskData.msg?.includes('not exist') || taskData.msg?.includes('not published')) {
+      if (taskData.msg?.includes('not exist') || taskData.msg?.includes('not published') || taskData.msg?.includes('not found')) {
         lastError = taskData.msg
         taskData = null
         continue
