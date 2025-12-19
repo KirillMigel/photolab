@@ -142,6 +142,7 @@ export default function Home() {
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-8 pb-12">
         {/* Background Image Container */}
+        {/* Высота была: 420px → стала: 540px */}
         <div
           className="overflow-hidden"
           style={{
@@ -149,7 +150,7 @@ export default function Home() {
             backgroundSize: 'cover',
             backgroundPosition: 'center top',
             backgroundRepeat: 'no-repeat',
-            minHeight: '420px',
+            minHeight: '540px',
             borderRadius: '4px',
             padding: '60px 40px',
             display: 'flex',
@@ -159,8 +160,9 @@ export default function Home() {
           }}
         >
           {/* Text Input with Duration Selector */}
+          {/* Ширина была: max-w-2xl (672px) → стала: max-w-xl (576px) */}
           <div
-            className="rounded-full flex items-center w-full max-w-2xl shadow-lg"
+            className="rounded-full flex items-center w-full max-w-xl shadow-lg"
             style={{
               background: '#FFFFFF',
               padding: '6px 6px 6px 24px',
@@ -172,7 +174,7 @@ export default function Home() {
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Опишите видео, например: Кот играет с мячиком"
+              placeholder="Кот играет на балалайке"
               disabled={isGenerating}
               className="flex-1 bg-transparent outline-none text-base"
               style={{
