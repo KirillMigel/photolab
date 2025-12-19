@@ -3,26 +3,11 @@ import { NextRequest, NextResponse } from 'next/server'
 const KIE_API_KEY = process.env.KIE_API_KEY || 'd889d48eead533eba92ea30c1564077d'
 const KIE_API_BASE = 'https://api.kie.ai'
 
-// Пробуем ВСЕ возможные варианты названий модели Grok
+// Grok Imagine - правильный формат из документации Kie.ai
 const MODEL_NAMES = [
-  // Основные варианты
-  'grok-imagine',
-  'grok_imagine',
-  'grokimagine',
-  // С версией
-  'grok-imagine-v1',
+  'grok-imagine/text-to-video',  // Основной для T2V
   'grok-imagine/t2v',
-  'grok-imagine/text-to-video',
-  // Короткие названия
-  'grok',
-  'grok-t2v',
-  'grok-video',
-  // С вендором
-  'xai/grok-imagine',
-  'xai/grok',
-  // CamelCase
-  'GrokImagine',
-  'Grok-Imagine',
+  'grok-imagine',
 ]
 
 export async function POST(request: NextRequest) {
