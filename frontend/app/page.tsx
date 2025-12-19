@@ -37,7 +37,7 @@ export default function Home() {
 
       if (data.videoUrl) {
         setVideoUrl(data.videoUrl)
-        setStatus('Готово!')
+        setStatus('')
         setIsGenerating(false)
         return
       }
@@ -56,7 +56,7 @@ export default function Home() {
 
         if (statusData.status === 'completed' && statusData.videoUrl) {
           setVideoUrl(statusData.videoUrl)
-          setStatus('Готово!')
+          setStatus('')
           setIsGenerating(false)
           return
         }
@@ -88,6 +88,159 @@ export default function Home() {
     }
   }
 
+  // Если есть видео — показываем другой layout
+  if (videoUrl) {
+    return (
+      <main className="min-h-screen" style={{ background: '#F7F7F4' }}>
+        {/* Header */}
+        <header>
+          <div className="max-w-7xl mx-auto px-8 py-6">
+            <div className="flex items-center justify-between">
+              <img src="/images/logo-videolab.svg" alt="Videolab" className="h-6" />
+              <button
+                className="px-5 py-2 rounded-full text-sm font-medium transition"
+                style={{ background: '#26251E', color: '#F7F7F4' }}
+              >
+                Войти
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* Video Result */}
+        <div className="max-w-4xl mx-auto px-8 pt-8 pb-4">
+          <div className="rounded-2xl overflow-hidden bg-black">
+            <video
+              src={videoUrl}
+              controls
+              autoPlay
+              loop
+              className="w-full"
+              style={{ maxHeight: '500px' }}
+            />
+          </div>
+        </div>
+
+        {/* Input Below Video */}
+        <div className="max-w-4xl mx-auto px-8 pb-12">
+          <div className="flex items-center gap-3">
+            {/* Input Field */}
+            <div
+              className="rounded-full flex items-center flex-1 shadow-sm"
+              style={{
+                background: '#FFFFFF',
+                padding: '6px 6px 6px 24px',
+                border: '1px solid #E5E5E5',
+              }}
+            >
+              <input
+                ref={inputRef}
+                type="text"
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Введите для настройки видео..."
+                disabled={isGenerating}
+                className="flex-1 bg-transparent outline-none text-base"
+                style={{ color: '#26251E', fontFamily: 'Inter, sans-serif' }}
+              />
+              
+              {/* Duration Dropdown */}
+              <select
+                value={duration}
+                onChange={(e) => setDuration(e.target.value as '5' | '10' | '15')}
+                disabled={isGenerating}
+                className="bg-gray-100 rounded-full px-3 py-2 text-sm border-0 outline-none cursor-pointer mr-2"
+                style={{ color: '#26251E', fontFamily: 'Inter, sans-serif' }}
+              >
+                <option value="5">5 сек</option>
+                <option value="10">10 сек</option>
+                <option value="15">15 сек</option>
+              </select>
+
+              {/* Generate Button */}
+              <button
+                onClick={generateVideo}
+                disabled={isGenerating || !prompt.trim()}
+                className="rounded-full px-4 py-2 text-sm font-medium transition hover:opacity-80 disabled:opacity-50 flex items-center gap-2"
+                style={{ background: '#26251E', color: '#F7F7F4' }}
+              >
+                {isGenerating ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Генерируем...
+                  </>
+                ) : (
+                  <>
+                    Сделать видео
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 19V5M5 12l7-7 7 7"/>
+                    </svg>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* Download Button */}
+            <a
+              href={videoUrl}
+              download="generated-video.mp4"
+              className="rounded-full p-3 transition hover:bg-gray-100"
+              style={{ border: '1px solid #E5E5E5', background: '#FFFFFF' }}
+              title="Скачать видео"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#26251E" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+              </svg>
+            </a>
+
+            {/* Share Button */}
+            <button
+              className="rounded-full p-3 transition hover:bg-gray-100"
+              style={{ border: '1px solid #E5E5E5', background: '#FFFFFF' }}
+              title="Поделиться"
+              onClick={() => {
+                if (navigator.share) {
+                  navigator.share({ title: 'Видео от Videolab', url: videoUrl })
+                } else {
+                  navigator.clipboard.writeText(videoUrl)
+                  alert('Ссылка скопирована!')
+                }
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#26251E" strokeWidth="2">
+                <circle cx="18" cy="5" r="3"/>
+                <circle cx="6" cy="12" r="3"/>
+                <circle cx="18" cy="19" r="3"/>
+                <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/>
+              </svg>
+            </button>
+          </div>
+
+          {status && (
+            <div className="text-center mt-4">
+              <p style={{ color: '#26251E', opacity: 0.7 }}>{status}</p>
+            </div>
+          )}
+
+          {error && (
+            <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-center">
+              {error}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <footer className="mt-16 py-8">
+          <div className="max-w-7xl mx-auto px-8 text-center text-sm" style={{ color: '#26251E', opacity: 0.5 }}>
+            <p>Videolab © 2025</p>
+          </div>
+        </footer>
+      </main>
+    )
+  }
+
+  // Начальный экран — без видео
   return (
     <main className="min-h-screen" style={{ background: '#F7F7F4' }}>
       {/* Header */}
@@ -97,10 +250,7 @@ export default function Home() {
             <img src="/images/logo-videolab.svg" alt="Videolab" className="h-6" />
             <button
               className="px-5 py-2 rounded-full text-sm font-medium transition"
-              style={{
-                background: '#26251E',
-                color: '#F7F7F4'
-              }}
+              style={{ background: '#26251E', color: '#F7F7F4' }}
             >
               Войти
             </button>
@@ -141,8 +291,6 @@ export default function Home() {
 
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-8 pb-12">
-        {/* Background Image Container */}
-        {/* Высота была: 420px → стала: 540px */}
         <div
           className="overflow-hidden"
           style={{
@@ -159,14 +307,10 @@ export default function Home() {
             alignItems: 'center',
           }}
         >
-          {/* Text Input with Duration Selector */}
-          {/* Ширина была: max-w-2xl (672px) → стала: max-w-xl (576px) */}
+          {/* Text Input */}
           <div
             className="rounded-full flex items-center w-full max-w-xl shadow-lg"
-            style={{
-              background: '#FFFFFF',
-              padding: '6px 6px 6px 24px',
-            }}
+            style={{ background: '#FFFFFF', padding: '6px 6px 6px 24px' }}
           >
             <input
               ref={inputRef}
@@ -177,39 +321,28 @@ export default function Home() {
               placeholder="Кот играет на балалайке"
               disabled={isGenerating}
               className="flex-1 bg-transparent outline-none text-base"
-              style={{
-                color: '#26251E',
-                fontFamily: 'Inter, sans-serif',
-              }}
+              style={{ color: '#26251E', fontFamily: 'Inter, sans-serif' }}
             />
             
-            {/* Duration Dropdown */}
             <select
               value={duration}
               onChange={(e) => setDuration(e.target.value as '5' | '10' | '15')}
               disabled={isGenerating}
               className="bg-gray-100 rounded-full px-4 py-2 text-sm border-0 outline-none cursor-pointer mr-2"
-              style={{ 
-                color: '#26251E',
-                fontFamily: 'Inter, sans-serif',
-              }}
+              style={{ color: '#26251E', fontFamily: 'Inter, sans-serif' }}
             >
               <option value="5">5 сек</option>
               <option value="10">10 сек</option>
               <option value="15">15 сек</option>
             </select>
 
-            {/* Send Button */}
             <button
               onClick={generateVideo}
               disabled={isGenerating || !prompt.trim()}
               className="transition hover:opacity-80 disabled:opacity-50 flex-shrink-0"
             >
               {isGenerating ? (
-                <div 
-                  className="w-8 h-8 rounded-full flex items-center justify-center"
-                  style={{ background: '#26251E' }}
-                >
+                <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: '#26251E' }}>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 </div>
               ) : (
@@ -218,57 +351,23 @@ export default function Home() {
             </button>
           </div>
 
-          {/* Status */}
           {status && (
             <div className="text-center mt-6">
               <p className="bg-white/90 px-4 py-2 rounded-lg shadow-sm" style={{ color: '#26251E' }}>{status}</p>
             </div>
           )}
 
-          {/* Error */}
           {error && (
             <div className="mt-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-center max-w-md">
               {error}
             </div>
           )}
         </div>
-
-        {/* Video Result */}
-        {videoUrl && (
-          <div className="mt-8">
-            <div className="rounded-2xl overflow-hidden bg-black">
-              <video
-                src={videoUrl}
-                controls
-                autoPlay
-                loop
-                className="w-full"
-                style={{ maxHeight: '500px' }}
-              />
-            </div>
-            <div className="flex justify-center gap-4 mt-4">
-              <a
-                href={videoUrl}
-                download="generated-video.mp4"
-                className="px-6 py-2 rounded-full text-sm font-medium transition hover:opacity-80"
-                style={{
-                  background: '#26251E',
-                  color: '#F7F7F4'
-                }}
-              >
-                ⬇️ Скачать видео
-              </a>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Footer */}
       <footer className="mt-16 py-8">
-        <div
-          className="max-w-7xl mx-auto px-8 text-center text-sm"
-          style={{ color: '#26251E', opacity: 0.5 }}
-        >
+        <div className="max-w-7xl mx-auto px-8 text-center text-sm" style={{ color: '#26251E', opacity: 0.5 }}>
           <p>Videolab © 2025</p>
         </div>
       </footer>
