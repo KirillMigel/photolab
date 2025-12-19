@@ -98,17 +98,7 @@ export default function Home() {
       <header>
         <div className="max-w-7xl mx-auto px-8 py-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span style={{ fontSize: '24px' }}>🎬</span>
-              <span style={{ 
-                fontFamily: 'Inter, sans-serif',
-                fontWeight: 600,
-                fontSize: '20px',
-                color: '#26251E'
-              }}>
-                VideoGen
-              </span>
-            </div>
+            <img src="/images/logo.svg" alt="Photolab" className="h-6" />
             <button
               className="px-5 py-2 rounded-full text-sm font-medium transition"
               style={{
@@ -154,93 +144,111 @@ export default function Home() {
       </section>
 
       {/* Main Content */}
-      <div className="max-w-3xl mx-auto px-8 pb-12">
-        {/* Text Input */}
+      <div className="max-w-6xl mx-auto px-8 pb-12">
+        {/* Background Image Container */}
         <div
-          className="rounded-full flex items-center"
+          className="overflow-hidden"
           style={{
-            background: '#E8E8E4',
-            padding: '8px 8px 8px 24px',
+            backgroundImage: 'url("/images/bg-upload3.png")',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            minHeight: '480px',
+            borderRadius: '4px',
+            padding: '60px 40px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
           }}
         >
-          <input
-            ref={inputRef}
-            type="text"
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Опишите видео, например: Кот играет с мячиком на зелёной лужайке"
-            disabled={isGenerating}
-            className="flex-1 bg-transparent outline-none text-base"
+          {/* Text Input */}
+          <div
+            className="rounded-full flex items-center w-full max-w-2xl shadow-lg"
             style={{
-              color: '#26251E',
-              fontFamily: 'Inter, sans-serif',
-            }}
-          />
-          <button
-            onClick={generateVideo}
-            disabled={isGenerating || !prompt.trim()}
-            className="rounded-full p-3 transition hover:opacity-80 disabled:opacity-50"
-            style={{
-              background: '#26251E',
-              color: '#F7F7F4'
+              background: '#FFFFFF',
+              padding: '8px 8px 8px 24px',
             }}
           >
-            {isGenerating ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M22 2L11 13" />
-                <path d="M22 2L15 22L11 13L2 9L22 2Z" />
-              </svg>
-            )}
-          </button>
-        </div>
-
-        {/* Settings */}
-        <div className="flex justify-center gap-6 mt-6">
-          <div className="flex items-center gap-2">
-            <span className="text-sm" style={{ color: '#26251E', opacity: 0.6 }}>Длительность:</span>
-            <select
-              value={duration}
-              onChange={(e) => setDuration(e.target.value as '5' | '10' | '15')}
+            <input
+              ref={inputRef}
+              type="text"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Опишите видео, например: Кот играет с мячиком на зелёной лужайке"
               disabled={isGenerating}
-              className="bg-white rounded-lg px-3 py-2 text-sm border-0 outline-none"
-              style={{ color: '#26251E' }}
+              className="flex-1 bg-transparent outline-none text-base"
+              style={{
+                color: '#26251E',
+                fontFamily: 'Inter, sans-serif',
+              }}
+            />
+            <button
+              onClick={generateVideo}
+              disabled={isGenerating || !prompt.trim()}
+              className="rounded-full p-3 transition hover:opacity-80 disabled:opacity-50"
+              style={{
+                background: '#26251E',
+                color: '#F7F7F4'
+              }}
             >
-              <option value="5">5 сек</option>
-              <option value="10">10 сек</option>
-              <option value="15">15 сек</option>
-            </select>
+              {isGenerating ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 2L11 13" />
+                  <path d="M22 2L15 22L11 13L2 9L22 2Z" />
+                </svg>
+              )}
+            </button>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-sm" style={{ color: '#26251E', opacity: 0.6 }}>Качество:</span>
-            <select
-              value={resolution}
-              onChange={(e) => setResolution(e.target.value as '720p' | '1080p')}
-              disabled={isGenerating}
-              className="bg-white rounded-lg px-3 py-2 text-sm border-0 outline-none"
-              style={{ color: '#26251E' }}
-            >
-              <option value="720p">720p</option>
-              <option value="1080p">1080p</option>
-            </select>
+
+          {/* Settings */}
+          <div className="flex justify-center gap-6 mt-6">
+            <div className="flex items-center gap-2">
+              <span className="text-sm" style={{ color: '#26251E', opacity: 0.7 }}>Длительность:</span>
+              <select
+                value={duration}
+                onChange={(e) => setDuration(e.target.value as '5' | '10' | '15')}
+                disabled={isGenerating}
+                className="bg-white rounded-lg px-3 py-2 text-sm border-0 outline-none shadow-sm"
+                style={{ color: '#26251E' }}
+              >
+                <option value="5">5 сек</option>
+                <option value="10">10 сек</option>
+                <option value="15">15 сек</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm" style={{ color: '#26251E', opacity: 0.7 }}>Качество:</span>
+              <select
+                value={resolution}
+                onChange={(e) => setResolution(e.target.value as '720p' | '1080p')}
+                disabled={isGenerating}
+                className="bg-white rounded-lg px-3 py-2 text-sm border-0 outline-none shadow-sm"
+                style={{ color: '#26251E' }}
+              >
+                <option value="720p">720p</option>
+                <option value="1080p">1080p</option>
+              </select>
+            </div>
           </div>
+
+          {/* Status */}
+          {status && (
+            <div className="text-center mt-6">
+              <p className="bg-white/80 px-4 py-2 rounded-lg" style={{ color: '#26251E' }}>{status}</p>
+            </div>
+          )}
+
+          {/* Error */}
+          {error && (
+            <div className="mt-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-center max-w-md">
+              {error}
+            </div>
+          )}
         </div>
-
-        {/* Status */}
-        {status && (
-          <div className="text-center mt-6">
-            <p style={{ color: '#26251E', opacity: 0.7 }}>{status}</p>
-          </div>
-        )}
-
-        {/* Error */}
-        {error && (
-          <div className="mt-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-center">
-            {error}
-          </div>
-        )}
 
         {/* Video Result */}
         {videoUrl && (
@@ -278,7 +286,7 @@ export default function Home() {
           className="max-w-7xl mx-auto px-8 text-center text-sm"
           style={{ color: '#26251E', opacity: 0.5 }}
         >
-          <p>VideoGen © 2025 • Powered by Wan 2.6</p>
+          <p>Photolab © 2025 • Powered by Wan 2.6</p>
         </div>
       </footer>
     </main>
