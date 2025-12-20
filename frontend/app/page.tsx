@@ -1,106 +1,132 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
-type AspectRatio = '3:2' | '2:3' | '1:1'
-type Mode = 'normal' | 'fun' | 'spicy'
+// Типы личностей учителя
+const PERSONALITIES = [
+  {
+    id: 'strict',
+    name: 'Строгий профессор',
+    emoji: '🎓',
+    description: 'Исправляет каждую ошибку, требовательный',
+    color: '#4A5568',
+  },
+  {
+    id: 'friendly',
+    name: 'Дружелюбный бадди',
+    emoji: '😊',
+    description: 'Поддерживает, хвалит, мотивирует',
+    color: '#38A169',
+  },
+  {
+    id: 'sarcastic',
+    name: 'Саркастичный ментор',
+    emoji: '😏',
+    description: 'С юмором, немного дерзкий',
+    color: '#9F7AEA',
+  },
+  {
+    id: 'moviestar',
+    name: 'Голливудская звезда',
+    emoji: '🌟',
+    description: 'Говорит как в кино, драматичный',
+    color: '#ED8936',
+  },
+]
+
+type Message = {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+type Personality = typeof PERSONALITIES[number]
 
 export default function Home() {
-  const [prompt, setPrompt] = useState('')
-  const [aspectRatio, setAspectRatio] = useState<AspectRatio>('3:2')
-  const [mode, setMode] = useState<Mode>('normal')
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [videoUrl, setVideoUrl] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [status, setStatus] = useState<string>('')
+  const [selectedPersonality, setSelectedPersonality] = useState<Personality | null>(null)
+  const [messages, setMessages] = useState<Message[]>([])
+  const [input, setInput] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const generateVideo = async () => {
-    if (!prompt.trim()) {
-      setError('Введите описание видео')
-      return
-    }
+  // Прокрутка вниз при новых сообщениях
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
-    setIsGenerating(true)
-    setError(null)
-    setVideoUrl(null)
-    setStatus('Отправляем запрос...')
+  // Фокус на инпут при выборе личности
+  useEffect(() => {
+    if (selectedPersonality) {
+      inputRef.current?.focus()
+    }
+  }, [selectedPersonality])
+
+  const sendMessage = async () => {
+    if (!input.trim() || !selectedPersonality || isLoading) return
+
+    const userMessage = input.trim()
+    setInput('')
+    setMessages(prev => [...prev, { role: 'user', content: userMessage }])
+    setIsLoading(true)
 
     try {
-      const response = await fetch('/api/generate-video', {
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, aspectRatio, mode }),
+        body: JSON.stringify({
+          message: userMessage,
+          personality: selectedPersonality.id,
+          history: messages.slice(-10), // Последние 10 сообщений для контекста
+        }),
       })
 
       const data = await response.json()
 
-      if (!response.ok || data.error) {
-        throw new Error(data.error || 'Failed to start generation')
+      if (data.error) {
+        throw new Error(data.error)
       }
 
-      if (data.videoUrl) {
-        setVideoUrl(data.videoUrl)
-        setStatus('')
-        setIsGenerating(false)
-        return
-      }
-
-      const taskId = data.taskId
-      setStatus('Генерируем видео... Это может занять 1-3 минуты')
-
-      let attempts = 0
-      const maxAttempts = 180
-
-      while (attempts < maxAttempts) {
-        await new Promise(r => setTimeout(r, 2000))
-
-        const statusResponse = await fetch(`/api/generate-video/${taskId}`)
-        const statusData = await statusResponse.json()
-
-        if (statusData.status === 'completed' && statusData.videoUrl) {
-          setVideoUrl(statusData.videoUrl)
-          setStatus('')
-          setIsGenerating(false)
-          return
-        }
-
-        if (statusData.status === 'failed') {
-          throw new Error(statusData.error || 'Generation failed')
-        }
-
-        if (statusData.progress) {
-          setStatus(`Генерируем... ${statusData.progress}`)
-        }
-
-        attempts++
-      }
-
-      throw new Error('Timeout: генерация заняла слишком много времени')
-
-    } catch (err: any) {
-      setError(err.message || 'Произошла ошибка')
-      setStatus('')
+      setMessages(prev => [...prev, { role: 'assistant', content: data.reply }])
+    } catch (error: any) {
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: `Ошибка: ${error.message}. Попробуйте ещё раз.` 
+      }])
     } finally {
-      setIsGenerating(false)
+      setIsLoading(false)
     }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !isGenerating) {
-      generateVideo()
+    if (e.key === 'Enter' && !e.shiftKey && !isLoading) {
+      e.preventDefault()
+      sendMessage()
     }
   }
 
-  // Если есть видео — показываем другой layout
-  if (videoUrl) {
+  const resetChat = () => {
+    setSelectedPersonality(null)
+    setMessages([])
+    setInput('')
+  }
+
+  // Экран выбора личности
+  if (!selectedPersonality) {
     return (
       <main className="min-h-screen" style={{ background: '#F7F7F4' }}>
         {/* Header */}
         <header>
           <div className="max-w-7xl mx-auto px-8 py-6">
             <div className="flex items-center justify-between">
-              <img src="/images/logo-videolab.svg" alt="Videolab" className="h-6" />
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🗣️</span>
+                <span 
+                  className="font-semibold text-xl"
+                  style={{ color: '#26251E', fontFamily: 'Inter, sans-serif' }}
+                >
+                  SpeakMate
+                </span>
+              </div>
               <button
                 className="px-5 py-2 rounded-full text-sm font-medium transition"
                 style={{ background: '#26251E', color: '#F7F7F4' }}
@@ -111,271 +137,253 @@ export default function Home() {
           </div>
         </header>
 
-        {/* Video Result */}
-        <div className="max-w-4xl mx-auto px-8 pt-8 pb-4">
-          <div className="rounded-2xl overflow-hidden bg-black">
-            <video
-              src={videoUrl}
-              controls
-              autoPlay
-              loop
-              className="w-full"
-              style={{ maxHeight: '500px' }}
-            />
-          </div>
-        </div>
+        {/* Hero Section */}
+        <section className="max-w-4xl mx-auto px-8 pt-16 pb-8 text-center">
+          <h1
+            className="mb-4"
+            style={{
+              fontFamily: 'Inter, sans-serif',
+              fontWeight: 600,
+              fontSize: '42px',
+              lineHeight: '1.1',
+              letterSpacing: '-0.04em',
+              color: '#26251E'
+            }}
+          >
+            Выбери своего учителя
+          </h1>
+          <p
+            className="mb-12 max-w-2xl mx-auto"
+            style={{
+              fontFamily: 'Inter, sans-serif',
+              fontWeight: 400,
+              fontSize: '18px',
+              lineHeight: '1.5',
+              letterSpacing: '-0.02em',
+              color: '#26251E',
+              opacity: 0.8
+            }}
+          >
+            Каждый учитель имеет свой характер и стиль общения.<br/>
+            Практикуй английский так, как тебе комфортно.
+          </p>
+        </section>
 
-        {/* Input Below Video */}
-        <div className="max-w-4xl mx-auto px-8 pb-12">
-          <div className="flex items-center gap-3">
-            {/* Input Field */}
-            <div
-              className="rounded-full flex items-center flex-1 shadow-sm"
-              style={{
-                background: '#FFFFFF',
-                padding: '6px 6px 6px 24px',
-                border: '1px solid #E5E5E5',
-              }}
-            >
-              <input
-                ref={inputRef}
-                type="text"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Введите новый запрос..."
-                disabled={isGenerating}
-                className="flex-1 bg-transparent outline-none text-base"
-                style={{ color: '#26251E', fontFamily: 'Inter, sans-serif' }}
-              />
-              
-              {/* Aspect Ratio Dropdown */}
-              <select
-                value={aspectRatio}
-                onChange={(e) => setAspectRatio(e.target.value as AspectRatio)}
-                disabled={isGenerating}
-                className="bg-gray-100 rounded-full px-3 py-2 text-sm border-0 outline-none cursor-pointer mr-2"
-                style={{ color: '#26251E', fontFamily: 'Inter, sans-serif' }}
-              >
-                <option value="3:2">16:9</option>
-                <option value="2:3">9:16</option>
-                <option value="1:1">1:1</option>
-              </select>
-
-              {/* Generate Button */}
+        {/* Personality Cards */}
+        <div className="max-w-4xl mx-auto px-8 pb-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {PERSONALITIES.map((personality) => (
               <button
-                onClick={generateVideo}
-                disabled={isGenerating || !prompt.trim()}
-                className="rounded-full px-4 py-2 text-sm font-medium transition hover:opacity-80 disabled:opacity-50 flex items-center gap-2"
-                style={{ background: '#26251E', color: '#F7F7F4' }}
+                key={personality.id}
+                onClick={() => setSelectedPersonality(personality)}
+                className="p-6 rounded-2xl text-left transition-all hover:scale-[1.02] hover:shadow-lg"
+                style={{ 
+                  background: '#FFFFFF',
+                  border: '2px solid transparent',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = personality.color
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'transparent'
+                }}
               >
-                {isGenerating ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Генерируем...
-                  </>
-                ) : (
-                  <>
-                    Сделать видео
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M12 19V5M5 12l7-7 7 7"/>
-                    </svg>
-                  </>
-                )}
+                <div className="flex items-start gap-4">
+                  <span className="text-4xl">{personality.emoji}</span>
+                  <div>
+                    <h3 
+                      className="font-semibold text-lg mb-1"
+                      style={{ color: '#26251E' }}
+                    >
+                      {personality.name}
+                    </h3>
+                    <p 
+                      className="text-sm"
+                      style={{ color: '#26251E', opacity: 0.7 }}
+                    >
+                      {personality.description}
+                    </p>
+                  </div>
+                </div>
               </button>
-            </div>
-
-            {/* Download Button */}
-            <a
-              href={videoUrl}
-              download="generated-video.mp4"
-              className="rounded-full p-3 transition hover:bg-gray-100"
-              style={{ border: '1px solid #E5E5E5', background: '#FFFFFF' }}
-              title="Скачать видео"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#26251E" strokeWidth="2">
-                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
-              </svg>
-            </a>
-
-            {/* Share Button */}
-            <button
-              className="rounded-full p-3 transition hover:bg-gray-100"
-              style={{ border: '1px solid #E5E5E5', background: '#FFFFFF' }}
-              title="Поделиться"
-              onClick={() => {
-                if (navigator.share) {
-                  navigator.share({ title: 'Видео от Videolab', url: videoUrl })
-                } else {
-                  navigator.clipboard.writeText(videoUrl)
-                  alert('Ссылка скопирована!')
-                }
-              }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#26251E" strokeWidth="2">
-                <circle cx="18" cy="5" r="3"/>
-                <circle cx="6" cy="12" r="3"/>
-                <circle cx="18" cy="19" r="3"/>
-                <path d="M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98"/>
-              </svg>
-            </button>
+            ))}
           </div>
-
-          {status && (
-            <div className="text-center mt-4">
-              <p style={{ color: '#26251E', opacity: 0.7 }}>{status}</p>
-            </div>
-          )}
-
-          {error && (
-            <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-center">
-              {error}
-            </div>
-          )}
         </div>
 
         {/* Footer */}
-        <footer className="mt-16 py-8">
+        <footer className="py-8">
           <div className="max-w-7xl mx-auto px-8 text-center text-sm" style={{ color: '#26251E', opacity: 0.5 }}>
-            <p>Videolab © 2025</p>
+            <p>SpeakMate © 2025 — Учи английский с AI</p>
           </div>
         </footer>
       </main>
     )
   }
 
-  // Начальный экран — без видео
+  // Экран чата
   return (
-    <main className="min-h-screen" style={{ background: '#F7F7F4' }}>
+    <main className="min-h-screen flex flex-col" style={{ background: '#F7F7F4' }}>
       {/* Header */}
-      <header>
-        <div className="max-w-7xl mx-auto px-8 py-6">
+      <header className="border-b" style={{ borderColor: 'rgba(38, 37, 30, 0.1)' }}>
+        <div className="max-w-4xl mx-auto px-8 py-4">
           <div className="flex items-center justify-between">
-            <img src="/images/logo-videolab.svg" alt="Videolab" className="h-6" />
             <button
-              className="px-5 py-2 rounded-full text-sm font-medium transition"
-              style={{ background: '#26251E', color: '#F7F7F4' }}
+              onClick={resetChat}
+              className="flex items-center gap-2 hover:opacity-70 transition"
             >
-              Войти
+              <span className="text-xl">🗣️</span>
+              <span 
+                className="font-semibold"
+                style={{ color: '#26251E', fontFamily: 'Inter, sans-serif' }}
+              >
+                SpeakMate
+              </span>
             </button>
+            
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">{selectedPersonality.emoji}</span>
+              <span 
+                className="font-medium text-sm"
+                style={{ color: selectedPersonality.color }}
+              >
+                {selectedPersonality.name}
+              </span>
+              <button
+                onClick={resetChat}
+                className="ml-4 px-3 py-1 rounded-full text-xs transition hover:bg-gray-100"
+                style={{ color: '#26251E', opacity: 0.6 }}
+              >
+                Сменить
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="max-w-4xl mx-auto px-8 pt-16 pb-8 text-center">
-        <h2
-          className="mb-4"
-          style={{
-            fontFamily: 'Inter, sans-serif',
-            fontWeight: 600,
-            fontSize: '42px',
-            lineHeight: '1.1',
-            letterSpacing: '-0.04em',
-            color: '#26251E'
-          }}
-        >
-          Генерация видео из текста
-        </h2>
-        <p
-          className="mb-10 max-w-2xl mx-auto"
-          style={{
-            fontFamily: 'Inter, sans-serif',
-            fontWeight: 400,
-            fontSize: '18px',
-            lineHeight: '1.5',
-            letterSpacing: '-0.02em',
-            color: '#26251E',
-            opacity: 0.8
-          }}
-        >
-          Опишите видео, которое хотите создать
-        </p>
-      </section>
+      {/* Chat Messages */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-3xl mx-auto px-8 py-6">
+          {messages.length === 0 && (
+            <div className="text-center py-16">
+              <span className="text-6xl mb-4 block">{selectedPersonality.emoji}</span>
+              <h2 
+                className="text-xl font-semibold mb-2"
+                style={{ color: '#26251E' }}
+              >
+                {selectedPersonality.name}
+              </h2>
+              <p 
+                className="text-sm mb-6"
+                style={{ color: '#26251E', opacity: 0.6 }}
+              >
+                Напиши что-нибудь на английском — я помогу улучшить!
+              </p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {['Hello, how are you?', 'Tell me about yourself', 'Help me practice'].map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    onClick={() => setInput(suggestion)}
+                    className="px-4 py-2 rounded-full text-sm transition hover:bg-gray-100"
+                    style={{ 
+                      background: '#FFFFFF', 
+                      color: '#26251E',
+                      border: '1px solid rgba(38, 37, 30, 0.1)'
+                    }}
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
-      {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-8 pb-12">
-        <div
-          className="overflow-hidden"
-          style={{
-            backgroundImage: 'url("/images/bg-upload3.png")',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center top',
-            backgroundRepeat: 'no-repeat',
-            minHeight: '540px',
-            borderRadius: '4px',
-            padding: '60px 40px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}
-        >
-          {/* Text Input */}
-          <div
-            className="rounded-full flex items-center w-full max-w-xl shadow-lg"
-            style={{ background: '#FFFFFF', padding: '6px 6px 6px 24px' }}
+          {messages.map((message, index) => (
+            <div
+              key={index}
+              className={`mb-4 flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div
+                className={`max-w-[80%] px-4 py-3 rounded-2xl ${
+                  message.role === 'user' 
+                    ? 'rounded-br-md' 
+                    : 'rounded-bl-md'
+                }`}
+                style={{
+                  background: message.role === 'user' ? '#26251E' : '#FFFFFF',
+                  color: message.role === 'user' ? '#F7F7F4' : '#26251E',
+                  boxShadow: message.role === 'assistant' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                }}
+              >
+                <p 
+                  className="text-sm leading-relaxed whitespace-pre-wrap"
+                  style={{ fontFamily: 'Inter, sans-serif' }}
+                >
+                  {message.content}
+                </p>
+              </div>
+            </div>
+          ))}
+
+          {isLoading && (
+            <div className="mb-4 flex justify-start">
+              <div
+                className="px-4 py-3 rounded-2xl rounded-bl-md"
+                style={{ background: '#FFFFFF', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}
+              >
+                <div className="flex gap-1">
+                  <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                  <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                  <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+      </div>
+
+      {/* Input Area */}
+      <div className="border-t" style={{ borderColor: 'rgba(38, 37, 30, 0.1)', background: '#FFFFFF' }}>
+        <div className="max-w-3xl mx-auto px-8 py-4">
+          <div 
+            className="flex items-center gap-3 rounded-full px-6 py-3"
+            style={{ background: '#F7F7F4' }}
           >
             <input
               ref={inputRef}
               type="text"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Кот играет на балалайке"
-              disabled={isGenerating}
+              placeholder="Write in English..."
+              disabled={isLoading}
               className="flex-1 bg-transparent outline-none text-base"
               style={{ color: '#26251E', fontFamily: 'Inter, sans-serif' }}
             />
-            
-            {/* Aspect Ratio Selector */}
-            <select
-              value={aspectRatio}
-              onChange={(e) => setAspectRatio(e.target.value as AspectRatio)}
-              disabled={isGenerating}
-              className="bg-gray-100 rounded-full px-4 py-2 text-sm border-0 outline-none cursor-pointer mr-2"
-              style={{ color: '#26251E', fontFamily: 'Inter, sans-serif' }}
-            >
-              <option value="3:2">16:9</option>
-              <option value="2:3">9:16</option>
-              <option value="1:1">1:1</option>
-            </select>
-
             <button
-              onClick={generateVideo}
-              disabled={isGenerating || !prompt.trim()}
-              className="transition hover:opacity-80 disabled:opacity-50 flex-shrink-0"
+              onClick={sendMessage}
+              disabled={isLoading || !input.trim()}
+              className="w-10 h-10 rounded-full flex items-center justify-center transition hover:opacity-80 disabled:opacity-40"
+              style={{ background: '#26251E' }}
             >
-              {isGenerating ? (
-                <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: '#26251E' }}>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                </div>
+              {isLoading ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
-                <img src="/images/send-icon.svg" alt="Send" className="w-8 h-8" />
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F7F7F4" strokeWidth="2">
+                  <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+                </svg>
               )}
             </button>
           </div>
-
-          {status && (
-            <div className="text-center mt-6">
-              <p className="bg-white/90 px-4 py-2 rounded-lg shadow-sm" style={{ color: '#26251E' }}>{status}</p>
-            </div>
-          )}
-
-          {error && (
-            <div className="mt-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-center max-w-md">
-              {error}
-            </div>
-          )}
+          <p 
+            className="text-center text-xs mt-3"
+            style={{ color: '#26251E', opacity: 0.4 }}
+          >
+            Пиши на английском — учитель исправит ошибки и поможет улучшить
+          </p>
         </div>
       </div>
-
-      {/* Footer */}
-      <footer className="mt-16 py-8">
-        <div className="max-w-7xl mx-auto px-8 text-center text-sm" style={{ color: '#26251E', opacity: 0.5 }}>
-          <p>Videolab © 2025</p>
-        </div>
-      </footer>
     </main>
   )
 }
