@@ -1,4 +1,4 @@
-// API для удаления фона через Kie.ai (Recraft)
+// API для удаления фона через Remove.bg
 
 export const removeBackground = async (
   file: File,
