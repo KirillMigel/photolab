@@ -3,10 +3,12 @@
 import { useState } from 'react'
 import ImageUploader from '@/components/ImageUploader'
 import ImagePreview from '@/components/ImagePreview'
-import BatchUploader from '@/components/BatchUploader'
+import ProductEnhancer from '@/components/ProductEnhancer'
+
+type Tab = 'remove-bg' | 'product-enhancer'
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'single' | 'batch'>('single')
+  const [activeTab, setActiveTab] = useState<Tab>('remove-bg')
   const [originalImage, setOriginalImage] = useState<string | null>(null)
   const [processedImage, setProcessedImage] = useState<string | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -44,7 +46,7 @@ export default function Home() {
             color: '#26251E'
           }}
         >
-          Удаление фона
+          {activeTab === 'remove-bg' ? 'Удаление фона' : 'Украшатель продукта'}
         </h2>
         <p
           className="mb-10 max-w-2xl mx-auto"
@@ -58,9 +60,47 @@ export default function Home() {
             opacity: 0.8
           }}
         >
-          Бесплатно стирайте фоны изображений
+          {activeTab === 'remove-bg' 
+            ? 'Бесплатно стирайте фоны изображений'
+            : 'Получите отполированное, профессиональное изображение вашего продукта'}
         </p>
       </section>
+
+      {/* Tabs */}
+      <div className="max-w-4xl mx-auto px-8 mb-6">
+        <div className="flex gap-2 justify-center">
+          <button
+            onClick={() => {
+              setActiveTab('remove-bg')
+              setOriginalImage(null)
+              setProcessedImage(null)
+            }}
+            className="px-6 py-2 rounded-full text-sm font-medium transition"
+            style={{
+              background: activeTab === 'remove-bg' ? '#26251E' : '#FFFFFF',
+              color: activeTab === 'remove-bg' ? '#F7F7F4' : '#26251E',
+              border: activeTab === 'remove-bg' ? 'none' : '1px solid rgba(38, 37, 30, 0.2)'
+            }}
+          >
+            Удаление фона
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('product-enhancer')
+              setOriginalImage(null)
+              setProcessedImage(null)
+            }}
+            className="px-6 py-2 rounded-full text-sm font-medium transition"
+            style={{
+              background: activeTab === 'product-enhancer' ? '#26251E' : '#FFFFFF',
+              color: activeTab === 'product-enhancer' ? '#F7F7F4' : '#26251E',
+              border: activeTab === 'product-enhancer' ? 'none' : '1px solid rgba(38, 37, 30, 0.2)'
+            }}
+          >
+            ✨ Украшатель продукта
+          </button>
+        </div>
+      </div>
 
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-8 pb-12 -mt-8">
@@ -79,12 +119,21 @@ export default function Home() {
             alignItems: 'center'
           }}
         >
-          <ImageUploader
-            onImageSelect={setOriginalImage}
-            onProcessed={setProcessedImage}
-            isProcessing={isProcessing}
-            setIsProcessing={setIsProcessing}
-          />
+          {activeTab === 'remove-bg' ? (
+            <ImageUploader
+              onImageSelect={setOriginalImage}
+              onProcessed={setProcessedImage}
+              isProcessing={isProcessing}
+              setIsProcessing={setIsProcessing}
+            />
+          ) : (
+            <ProductEnhancer
+              onImageSelect={setOriginalImage}
+              onProcessed={setProcessedImage}
+              isProcessing={isProcessing}
+              setIsProcessing={setIsProcessing}
+            />
+          )}
         </div>
 
         {(originalImage || processedImage) && (
