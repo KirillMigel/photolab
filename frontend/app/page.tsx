@@ -1,82 +1,62 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 
-// Типы личностей учителя
-const PERSONALITIES = [
-  {
-    id: 'strict',
-    name: 'Строгий профессор',
-    emoji: '🎓',
-    description: 'Исправляет каждую ошибку, требовательный',
-    color: '#4A5568',
-  },
-  {
-    id: 'friendly',
-    name: 'Дружелюбный бадди',
-    emoji: '😊',
-    description: 'Поддерживает, хвалит, мотивирует',
-    color: '#38A169',
-  },
-  {
-    id: 'sarcastic',
-    name: 'Саркастичный ментор',
-    emoji: '😏',
-    description: 'С юмором, немного дерзкий',
-    color: '#9F7AEA',
-  },
-  {
-    id: 'moviestar',
-    name: 'Голливудская звезда',
-    emoji: '🌟',
-    description: 'Говорит как в кино, драматичный',
-    color: '#ED8936',
-  },
+type Platform = 'instagram' | 'tiktok' | 'twitter' | 'linkedin'
+type ContentType = 'post' | 'story' | 'reel' | 'tweet'
+
+const PLATFORMS = [
+  { id: 'instagram' as Platform, name: 'Instagram', icon: '📷', color: '#E4405F' },
+  { id: 'tiktok' as Platform, name: 'TikTok', icon: '🎵', color: '#000000' },
+  { id: 'twitter' as Platform, name: 'Twitter', icon: '🐦', color: '#1DA1F2' },
+  { id: 'linkedin' as Platform, name: 'LinkedIn', icon: '💼', color: '#0077B5' },
 ]
 
-type Message = {
-  role: 'user' | 'assistant'
-  content: string
+const CONTENT_TYPES: Record<Platform, { id: ContentType; name: string }[]> = {
+  instagram: [
+    { id: 'post', name: 'Пост' },
+    { id: 'story', name: 'История' },
+    { id: 'reel', name: 'Reels' },
+  ],
+  tiktok: [
+    { id: 'reel', name: 'Видео' },
+  ],
+  twitter: [
+    { id: 'tweet', name: 'Твит' },
+  ],
+  linkedin: [
+    { id: 'post', name: 'Пост' },
+  ],
 }
 
-type Personality = typeof PERSONALITIES[number]
+type GeneratedContent = {
+  text: string
+  hashtags: string[]
+  platform: Platform
+  contentType: ContentType
+  timestamp: number
+}
 
 export default function Home() {
-  const [selectedPersonality, setSelectedPersonality] = useState<Personality | null>(null)
-  const [messages, setMessages] = useState<Message[]>([])
-  const [input, setInput] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const [selectedPlatform, setSelectedPlatform] = useState<Platform | null>(null)
+  const [selectedContentType, setSelectedContentType] = useState<ContentType | null>(null)
+  const [topic, setTopic] = useState('')
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [generatedContent, setGeneratedContent] = useState<GeneratedContent | null>(null)
+  const [savedPosts, setSavedPosts] = useState<GeneratedContent[]>([])
 
-  // Прокрутка вниз при новых сообщениях
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  const handleGenerate = async () => {
+    if (!selectedPlatform || !selectedContentType || !topic.trim()) return
 
-  // Фокус на инпут при выборе личности
-  useEffect(() => {
-    if (selectedPersonality) {
-      inputRef.current?.focus()
-    }
-  }, [selectedPersonality])
-
-  const sendMessage = async () => {
-    if (!input.trim() || !selectedPersonality || isLoading) return
-
-    const userMessage = input.trim()
-    setInput('')
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }])
-    setIsLoading(true)
-
+    setIsGenerating(true)
     try {
-      const response = await fetch('/api/chat', {
+      const response = await fetch('/api/generate-content', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: userMessage,
-          personality: selectedPersonality.id,
-          history: messages.slice(-10), // Последние 10 сообщений для контекста
+          platform: selectedPlatform,
+          contentType: selectedContentType,
+          topic: topic.trim(),
         }),
       })
 
@@ -86,47 +66,66 @@ export default function Home() {
         throw new Error(data.error)
       }
 
-      setMessages(prev => [...prev, { role: 'assistant', content: data.reply }])
+      const newContent: GeneratedContent = {
+        text: data.text,
+        hashtags: data.hashtags || [],
+        platform: selectedPlatform,
+        contentType: selectedContentType,
+        timestamp: Date.now(),
+      }
+
+      setGeneratedContent(newContent)
     } catch (error: any) {
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: `Ошибка: ${error.message}. Попробуйте ещё раз.` 
-      }])
+      alert(`Ошибка: ${error.message}`)
     } finally {
-      setIsLoading(false)
+      setIsGenerating(false)
     }
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey && !isLoading) {
-      e.preventDefault()
-      sendMessage()
+  const handleSave = () => {
+    if (generatedContent) {
+      setSavedPosts([...savedPosts, generatedContent])
+      alert('Пост сохранен в планировщик!')
     }
   }
 
-  const resetChat = () => {
-    setSelectedPersonality(null)
-    setMessages([])
-    setInput('')
+  const handleCopy = (text: string, hashtags: string[]) => {
+    const fullText = `${text}\n\n${hashtags.join(' ')}`
+    navigator.clipboard.writeText(fullText)
+    alert('Скопировано в буфер обмена!')
   }
 
-  // Экран выбора личности
-  if (!selectedPersonality) {
-    return (
-      <main className="min-h-screen" style={{ background: '#F7F7F4' }}>
-        {/* Header */}
-        <header>
-          <div className="max-w-7xl mx-auto px-8 py-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">🗣️</span>
+  const handleReset = () => {
+    setSelectedPlatform(null)
+    setSelectedContentType(null)
+    setTopic('')
+    setGeneratedContent(null)
+  }
+
+  return (
+    <main className="min-h-screen" style={{ background: '#F7F7F4' }}>
+      {/* Header */}
+      <header>
+        <div className="max-w-7xl mx-auto px-8 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">✨</span>
+              <span 
+                className="font-semibold text-xl"
+                style={{ color: '#26251E', fontFamily: 'Inter, sans-serif' }}
+              >
+                ContentAI
+              </span>
+            </div>
+            <div className="flex items-center gap-4">
+              {savedPosts.length > 0 && (
                 <span 
-                  className="font-semibold text-xl"
-                  style={{ color: '#26251E', fontFamily: 'Inter, sans-serif' }}
+                  className="text-sm"
+                  style={{ color: '#26251E', opacity: 0.6 }}
                 >
-                  SpeakMate
+                  Сохранено: {savedPosts.length}
                 </span>
-              </div>
+              )}
               <button
                 className="px-5 py-2 rounded-full text-sm font-medium transition"
                 style={{ background: '#26251E', color: '#F7F7F4' }}
@@ -135,255 +134,253 @@ export default function Home() {
               </button>
             </div>
           </div>
-        </header>
+        </div>
+      </header>
 
-        {/* Hero Section */}
-        <section className="max-w-4xl mx-auto px-8 pt-16 pb-8 text-center">
-          <h1
-            className="mb-4"
-            style={{
-              fontFamily: 'Inter, sans-serif',
-              fontWeight: 600,
-              fontSize: '42px',
-              lineHeight: '1.1',
-              letterSpacing: '-0.04em',
-              color: '#26251E'
-            }}
-          >
-            Выбери своего учителя
-          </h1>
-          <p
-            className="mb-12 max-w-2xl mx-auto"
-            style={{
-              fontFamily: 'Inter, sans-serif',
-              fontWeight: 400,
-              fontSize: '18px',
-              lineHeight: '1.5',
-              letterSpacing: '-0.02em',
-              color: '#26251E',
-              opacity: 0.8
-            }}
-          >
-            Каждый учитель имеет свой характер и стиль общения.<br/>
-            Практикуй английский так, как тебе комфортно.
-          </p>
-        </section>
+      {/* Hero Section */}
+      <section className="max-w-4xl mx-auto px-8 pt-12 pb-8 text-center">
+        <h1
+          className="mb-4"
+          style={{
+            fontFamily: 'Inter, sans-serif',
+            fontWeight: 600,
+            fontSize: '42px',
+            lineHeight: '1.1',
+            letterSpacing: '-0.04em',
+            color: '#26251E'
+          }}
+        >
+          Создавай контент с AI
+        </h1>
+        <p
+          className="mb-8 max-w-2xl mx-auto"
+          style={{
+            fontFamily: 'Inter, sans-serif',
+            fontWeight: 400,
+            fontSize: '18px',
+            lineHeight: '1.5',
+            letterSpacing: '-0.02em',
+            color: '#26251E',
+            opacity: 0.8
+          }}
+        >
+          Генерируй посты для Instagram, TikTok, Twitter и LinkedIn за секунды
+        </p>
+      </section>
 
-        {/* Personality Cards */}
-        <div className="max-w-4xl mx-auto px-8 pb-16">
+      {/* Main Content */}
+      <div className="max-w-4xl mx-auto px-8 pb-12">
+        {!selectedPlatform ? (
+          // Выбор платформы
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {PERSONALITIES.map((personality) => (
+            {PLATFORMS.map((platform) => (
               <button
-                key={personality.id}
-                onClick={() => setSelectedPersonality(personality)}
+                key={platform.id}
+                onClick={() => setSelectedPlatform(platform.id)}
                 className="p-6 rounded-2xl text-left transition-all hover:scale-[1.02] hover:shadow-lg"
                 style={{ 
                   background: '#FFFFFF',
                   border: '2px solid transparent',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = personality.color
+                  e.currentTarget.style.borderColor = platform.color
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = 'transparent'
                 }}
               >
-                <div className="flex items-start gap-4">
-                  <span className="text-4xl">{personality.emoji}</span>
-                  <div>
-                    <h3 
-                      className="font-semibold text-lg mb-1"
-                      style={{ color: '#26251E' }}
-                    >
-                      {personality.name}
-                    </h3>
-                    <p 
-                      className="text-sm"
-                      style={{ color: '#26251E', opacity: 0.7 }}
-                    >
-                      {personality.description}
-                    </p>
-                  </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-4xl">{platform.icon}</span>
+                  <span 
+                    className="font-semibold text-lg"
+                    style={{ color: '#26251E' }}
+                  >
+                    {platform.name}
+                  </span>
                 </div>
               </button>
             ))}
           </div>
-        </div>
-
-        {/* Footer */}
-        <footer className="py-8">
-          <div className="max-w-7xl mx-auto px-8 text-center text-sm" style={{ color: '#26251E', opacity: 0.5 }}>
-            <p>SpeakMate © 2025 — Учи английский с AI</p>
-          </div>
-        </footer>
-      </main>
-    )
-  }
-
-  // Экран чата
-  return (
-    <main className="min-h-screen flex flex-col" style={{ background: '#F7F7F4' }}>
-      {/* Header */}
-      <header className="border-b" style={{ borderColor: 'rgba(38, 37, 30, 0.1)' }}>
-        <div className="max-w-4xl mx-auto px-8 py-4">
-          <div className="flex items-center justify-between">
+        ) : !selectedContentType ? (
+          // Выбор типа контента
+          <div>
             <button
-              onClick={resetChat}
-              className="flex items-center gap-2 hover:opacity-70 transition"
+              onClick={() => setSelectedPlatform(null)}
+              className="mb-6 text-sm flex items-center gap-2 hover:opacity-70 transition"
+              style={{ color: '#26251E', opacity: 0.6 }}
             >
-              <span className="text-xl">🗣️</span>
-              <span 
-                className="font-semibold"
-                style={{ color: '#26251E', fontFamily: 'Inter, sans-serif' }}
-              >
-                SpeakMate
-              </span>
+              ← Назад
             </button>
-            
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">{selectedPersonality.emoji}</span>
-              <span 
-                className="font-medium text-sm"
-                style={{ color: selectedPersonality.color }}
-              >
-                {selectedPersonality.name}
-              </span>
-              <button
-                onClick={resetChat}
-                className="ml-4 px-3 py-1 rounded-full text-xs transition hover:bg-gray-100"
-                style={{ color: '#26251E', opacity: 0.6 }}
-              >
-                Сменить
-              </button>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {CONTENT_TYPES[selectedPlatform].map((type) => (
+                <button
+                  key={type.id}
+                  onClick={() => setSelectedContentType(type.id)}
+                  className="p-6 rounded-2xl text-center transition-all hover:scale-[1.02] hover:shadow-lg"
+                  style={{ 
+                    background: '#FFFFFF',
+                    border: '2px solid rgba(38, 37, 30, 0.1)',
+                  }}
+                >
+                  <span 
+                    className="font-semibold text-lg"
+                    style={{ color: '#26251E' }}
+                  >
+                    {type.name}
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
-        </div>
-      </header>
-
-      {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-3xl mx-auto px-8 py-6">
-          {messages.length === 0 && (
-            <div className="text-center py-16">
-              <span className="text-6xl mb-4 block">{selectedPersonality.emoji}</span>
-              <h2 
-                className="text-xl font-semibold mb-2"
-                style={{ color: '#26251E' }}
-              >
-                {selectedPersonality.name}
-              </h2>
-              <p 
-                className="text-sm mb-6"
-                style={{ color: '#26251E', opacity: 0.6 }}
-              >
-                Напиши что-нибудь на английском — я помогу улучшить!
-              </p>
-              <div className="flex flex-wrap justify-center gap-2">
-                {['Hello, how are you?', 'Tell me about yourself', 'Help me practice'].map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    onClick={() => setInput(suggestion)}
-                    className="px-4 py-2 rounded-full text-sm transition hover:bg-gray-100"
-                    style={{ 
-                      background: '#FFFFFF', 
-                      color: '#26251E',
-                      border: '1px solid rgba(38, 37, 30, 0.1)'
-                    }}
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {messages.map((message, index) => (
-            <div
-              key={index}
-              className={`mb-4 flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+        ) : (
+          // Генерация контента
+          <div>
+            <button
+              onClick={handleReset}
+              className="mb-6 text-sm flex items-center gap-2 hover:opacity-70 transition"
+              style={{ color: '#26251E', opacity: 0.6 }}
             >
-              <div
-                className={`max-w-[80%] px-4 py-3 rounded-2xl ${
-                  message.role === 'user' 
-                    ? 'rounded-br-md' 
-                    : 'rounded-bl-md'
-                }`}
-                style={{
-                  background: message.role === 'user' ? '#26251E' : '#FFFFFF',
-                  color: message.role === 'user' ? '#F7F7F4' : '#26251E',
-                  boxShadow: message.role === 'assistant' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                }}
-              >
-                <p 
-                  className="text-sm leading-relaxed whitespace-pre-wrap"
-                  style={{ fontFamily: 'Inter, sans-serif' }}
-                >
-                  {message.content}
-                </p>
-              </div>
-            </div>
-          ))}
+              ← Начать заново
+            </button>
 
-          {isLoading && (
-            <div className="mb-4 flex justify-start">
-              <div
-                className="px-4 py-3 rounded-2xl rounded-bl-md"
-                style={{ background: '#FFFFFF', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}
-              >
-                <div className="flex gap-1">
-                  <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                  <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                  <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '300ms' }}></span>
+            <div className="bg-white rounded-2xl p-8 shadow-sm">
+              {/* Информация о выборе */}
+              <div className="flex items-center gap-3 mb-6 pb-6 border-b" style={{ borderColor: 'rgba(38, 37, 30, 0.1)' }}>
+                <span className="text-2xl">
+                  {PLATFORMS.find(p => p.id === selectedPlatform)?.icon}
+                </span>
+                <div>
+                  <p 
+                    className="font-semibold"
+                    style={{ color: '#26251E' }}
+                  >
+                    {PLATFORMS.find(p => p.id === selectedPlatform)?.name}
+                  </p>
+                  <p 
+                    className="text-sm"
+                    style={{ color: '#26251E', opacity: 0.6 }}
+                  >
+                    {CONTENT_TYPES[selectedPlatform].find(t => t.id === selectedContentType)?.name}
+                  </p>
                 </div>
               </div>
-            </div>
-          )}
 
-          <div ref={messagesEndRef} />
-        </div>
-      </div>
+              {/* Поле ввода темы */}
+              <div className="mb-6">
+                <label 
+                  className="block mb-2 text-sm font-medium"
+                  style={{ color: '#26251E' }}
+                >
+                  О чем пост?
+                </label>
+                <textarea
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  placeholder="Например: новый продукт, полезный совет, мотивационная цитата..."
+                  className="w-full p-4 rounded-lg border-2 outline-none resize-none"
+                  style={{ 
+                    borderColor: 'rgba(38, 37, 30, 0.2)',
+                    color: '#26251E',
+                    fontFamily: 'Inter, sans-serif',
+                    minHeight: '100px'
+                  }}
+                  disabled={isGenerating}
+                />
+              </div>
 
-      {/* Input Area */}
-      <div className="border-t" style={{ borderColor: 'rgba(38, 37, 30, 0.1)', background: '#FFFFFF' }}>
-        <div className="max-w-3xl mx-auto px-8 py-4">
-          <div 
-            className="flex items-center gap-3 rounded-full px-6 py-3"
-            style={{ background: '#F7F7F4' }}
-          >
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Write in English..."
-              disabled={isLoading}
-              className="flex-1 bg-transparent outline-none text-base"
-              style={{ color: '#26251E', fontFamily: 'Inter, sans-serif' }}
-            />
-            <button
-              onClick={sendMessage}
-              disabled={isLoading || !input.trim()}
-              className="w-10 h-10 rounded-full flex items-center justify-center transition hover:opacity-80 disabled:opacity-40"
-              style={{ background: '#26251E' }}
-            >
-              {isLoading ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F7F7F4" strokeWidth="2">
-                  <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
-                </svg>
+              {/* Кнопка генерации */}
+              <button
+                onClick={handleGenerate}
+                disabled={isGenerating || !topic.trim()}
+                className="w-full py-4 rounded-lg font-medium transition hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                style={{ background: '#26251E', color: '#F7F7F4' }}
+              >
+                {isGenerating ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Генерируем контент...
+                  </>
+                ) : (
+                  <>
+                    ✨ Сгенерировать контент
+                  </>
+                )}
+              </button>
+
+              {/* Сгенерированный контент */}
+              {generatedContent && (
+                <div className="mt-8 pt-8 border-t" style={{ borderColor: 'rgba(38, 37, 30, 0.1)' }}>
+                  <div className="mb-4">
+                    <p 
+                      className="text-sm font-medium mb-2"
+                      style={{ color: '#26251E', opacity: 0.6 }}
+                    >
+                      Текст поста:
+                    </p>
+                    <div 
+                      className="p-4 rounded-lg"
+                      style={{ background: '#F7F7F4', color: '#26251E' }}
+                    >
+                      <p className="whitespace-pre-wrap leading-relaxed">{generatedContent.text}</p>
+                    </div>
+                  </div>
+
+                  {generatedContent.hashtags.length > 0 && (
+                    <div className="mb-6">
+                      <p 
+                        className="text-sm font-medium mb-2"
+                        style={{ color: '#26251E', opacity: 0.6 }}
+                      >
+                        Хештеги:
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {generatedContent.hashtags.map((tag, idx) => (
+                          <span
+                            key={idx}
+                            className="px-3 py-1 rounded-full text-sm"
+                            style={{ background: '#F7F7F4', color: '#26251E' }}
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Действия */}
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => handleCopy(generatedContent.text, generatedContent.hashtags)}
+                      className="flex-1 py-3 rounded-lg font-medium transition hover:opacity-80"
+                      style={{ background: '#26251E', color: '#F7F7F4' }}
+                    >
+                      📋 Копировать
+                    </button>
+                    <button
+                      onClick={handleSave}
+                      className="flex-1 py-3 rounded-lg font-medium transition hover:opacity-80 border-2"
+                      style={{ 
+                        borderColor: '#26251E', 
+                        color: '#26251E',
+                        background: 'transparent'
+                      }}
+                    >
+                      💾 Сохранить
+                    </button>
+                  </div>
+                </div>
               )}
-            </button>
+            </div>
           </div>
-          <p 
-            className="text-center text-xs mt-3"
-            style={{ color: '#26251E', opacity: 0.4 }}
-          >
-            Пиши на английском — учитель исправит ошибки и поможет улучшить
-          </p>
-        </div>
+        )}
       </div>
+
+      {/* Footer */}
+      <footer className="py-8">
+        <div className="max-w-7xl mx-auto px-8 text-center text-sm" style={{ color: '#26251E', opacity: 0.5 }}>
+          <p>ContentAI © 2025 — Создавай контент с помощью AI</p>
+        </div>
+      </footer>
     </main>
   )
 }
