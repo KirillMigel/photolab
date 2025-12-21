@@ -3,9 +3,9 @@
 import { useState } from 'react'
 import ImageUploader from '@/components/ImageUploader'
 import ImagePreview from '@/components/ImagePreview'
-import ProductEnhancer from '@/components/ProductEnhancer'
+import QualityEnhancer from '@/components/QualityEnhancer'
 
-type Tab = 'remove-bg' | 'product-enhancer'
+type Tab = 'remove-bg' | 'quality-enhance'
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>('remove-bg')
@@ -46,7 +46,7 @@ export default function Home() {
             color: '#26251E'
           }}
         >
-          {activeTab === 'remove-bg' ? 'Удаление фона' : 'Украшатель продукта'}
+          {activeTab === 'remove-bg' ? 'Удаление фона' : 'Улучшение качества'}
         </h2>
         <p
           className="mb-10 max-w-2xl mx-auto"
@@ -62,7 +62,7 @@ export default function Home() {
         >
           {activeTab === 'remove-bg' 
             ? 'Бесплатно стирайте фоны изображений'
-            : 'Получите отполированное, профессиональное изображение вашего продукта'}
+            : 'Увеличьте разрешение и улучшите качество ваших фотографий'}
         </p>
       </section>
 
@@ -86,18 +86,18 @@ export default function Home() {
           </button>
           <button
             onClick={() => {
-              setActiveTab('product-enhancer')
+              setActiveTab('quality-enhance')
               setOriginalImage(null)
               setProcessedImage(null)
             }}
             className="px-6 py-2 rounded-full text-sm font-medium transition"
             style={{
-              background: activeTab === 'product-enhancer' ? '#26251E' : '#FFFFFF',
-              color: activeTab === 'product-enhancer' ? '#F7F7F4' : '#26251E',
-              border: activeTab === 'product-enhancer' ? 'none' : '1px solid rgba(38, 37, 30, 0.2)'
+              background: activeTab === 'quality-enhance' ? '#26251E' : '#FFFFFF',
+              color: activeTab === 'quality-enhance' ? '#F7F7F4' : '#26251E',
+              border: activeTab === 'quality-enhance' ? 'none' : '1px solid rgba(38, 37, 30, 0.2)'
             }}
           >
-            ✨ Украшатель продукта
+            📸 Улучшение качества
           </button>
         </div>
       </div>
@@ -127,7 +127,7 @@ export default function Home() {
               setIsProcessing={setIsProcessing}
             />
           ) : (
-            <ProductEnhancer
+            <QualityEnhancer
               onImageSelect={setOriginalImage}
               onProcessed={setProcessedImage}
               isProcessing={isProcessing}

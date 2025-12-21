@@ -2,22 +2,21 @@
 
 import { useCallback, useRef, useState } from 'react'
 
-interface ProductEnhancerProps {
+interface QualityEnhancerProps {
   onImageSelect: (image: string) => void
   onProcessed: (image: string) => void
   isProcessing: boolean
   setIsProcessing: (processing: boolean) => void
 }
 
-export default function ProductEnhancer({
+export default function QualityEnhancer({
   onImageSelect,
   onProcessed,
   isProcessing,
   setIsProcessing,
-}: ProductEnhancerProps) {
+}: QualityEnhancerProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [prompt, setPrompt] = useState('professional product photography, studio lighting, clean white background, high quality')
   const [isHover, setIsHover] = useState(false)
   const inputRef = useRef<HTMLInputElement | null>(null)
 
@@ -46,16 +45,15 @@ export default function ProductEnhancer({
       try {
         const formData = new FormData()
         formData.append('image', file)
-        formData.append('prompt', prompt)
 
-        const response = await fetch('/api/enhance-product', {
+        const response = await fetch('/api/enhance-quality', {
           method: 'POST',
           body: formData,
         })
 
         if (!response.ok) {
           const error = await response.json().catch(() => ({ error: 'Unknown error' }))
-          throw new Error(error.error || 'Failed to enhance product')
+          throw new Error(error.error || 'Failed to enhance quality')
         }
 
         const data = await response.json()
@@ -71,7 +69,7 @@ export default function ProductEnhancer({
             while (attempts < maxAttempts) {
               await new Promise(r => setTimeout(r, 2000))
 
-              const statusResponse = await fetch(`/api/enhance-product/${data.taskId}`)
+              const statusResponse = await fetch(`/api/enhance-quality/${data.taskId}`)
               const statusData = await statusResponse.json()
 
               if (statusData.status === 'completed' && statusData.url) {
@@ -100,7 +98,7 @@ export default function ProductEnhancer({
         setIsProcessing(false)
       }
     },
-    [prompt, onImageSelect, onProcessed, setIsProcessing]
+    [onImageSelect, onProcessed, setIsProcessing]
   )
 
   const handleDrop = useCallback(
@@ -132,35 +130,6 @@ export default function ProductEnhancer({
 
   return (
     <div className="space-y-6">
-      {/* Промпт для улучшения */}
-      <div>
-        <label 
-          className="block mb-2 text-sm font-medium"
-          style={{ color: '#26251E' }}
-        >
-          Описание улучшения (опционально):
-        </label>
-        <input
-          type="text"
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder="professional product photography, studio lighting..."
-          className="w-full p-3 rounded-lg border-2 outline-none"
-          style={{ 
-            borderColor: 'rgba(38, 37, 30, 0.2)',
-            color: '#26251E',
-            fontFamily: 'Inter, sans-serif'
-          }}
-          disabled={isProcessing}
-        />
-        <p 
-          className="mt-1 text-xs"
-          style={{ color: '#26251E', opacity: 0.5 }}
-        >
-          Опишите, как улучшить изображение продукта
-        </p>
-      </div>
-
       {/* Upload Zone */}
       <div
         onDrop={handleDrop}
@@ -205,13 +174,13 @@ export default function ProductEnhancer({
             <div>
               <div className="inline-block animate-spin rounded-full h-10 w-10 border-2 border-t-transparent" style={{ borderColor: '#26251E', borderTopColor: 'transparent' }}></div>
               <p className="mt-6 text-base" style={{ color: '#26251E', opacity: 0.6 }}>
-                Улучшаем изображение продукта...
+                Улучшаем качество фото...
               </p>
             </div>
           ) : (
             <>
               <div className="flex justify-center">
-                <span className="text-5xl">✨</span>
+                <span className="text-5xl">📸</span>
               </div>
               
               <div className="space-y-2">
@@ -219,10 +188,13 @@ export default function ProductEnhancer({
                   className="text-base font-medium"
                   style={{ color: isHover ? '#FC8C1D' : '#26251E' }}
                 >
-                  Загрузите фото продукта
+                  Загрузите фото для улучшения
                 </p>
                 <p className="text-sm" style={{ color: '#26251E', opacity: 0.6 }}>
                   Или перетащите изображение
+                </p>
+                <p className="text-xs mt-2" style={{ color: '#26251E', opacity: 0.5 }}>
+                  Увеличим разрешение и улучшим качество
                 </p>
               </div>
             </>

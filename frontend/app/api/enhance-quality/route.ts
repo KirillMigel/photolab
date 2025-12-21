@@ -7,30 +7,30 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const imageFile = formData.get('image') as File | null
-    const prompt = formData.get('prompt') as string | null || 'professional product photography, studio lighting, clean white background, high quality, commercial photography'
 
     if (!imageFile) {
       return NextResponse.json({ error: 'No image file provided' }, { status: 400 })
     }
 
-    console.log('Enhancing product image with Kie.ai...')
+    console.log('Enhancing image quality with Kie.ai...')
     console.log('File name:', imageFile.name)
     console.log('File size:', imageFile.size)
-    console.log('Prompt:', prompt)
 
     // Конвертируем изображение в base64
     const imageBuffer = await imageFile.arrayBuffer()
     const base64Image = Buffer.from(imageBuffer).toString('base64')
     const imageDataUrl = `data:${imageFile.type};base64,${base64Image}`
 
-    // Пробуем разные модели для улучшения продукта
+    // Пробуем разные модели для улучшения качества (upscaling/enhancement)
     const models = [
-      'flux-1-context',
-      'flux-context',
-      'flux/context',
-      '4o-image',
-      '4o-image-api',
-      'nano-banana',
+      '4o-image-upscale',      // Upscaling через 4o Image
+      'flux-upscale',          // Upscaling через Flux
+      'flux-1-upscale',
+      'upscale',               // Общий upscale
+      'image-upscale',
+      'super-resolution',
+      '4o-image',              // Fallback - может улучшить качество
+      'flux-context',          // Fallback
     ]
 
     let taskData = null
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       console.log(`Trying model: ${model}`)
 
       try {
-        // Создаем задачу на улучшение изображения
+        // Создаем задачу на улучшение качества
         const createTaskResponse = await fetch(`${KIE_API_BASE}/api/v1/jobs/createTask`, {
           method: 'POST',
           headers: {
@@ -51,12 +51,15 @@ export async function POST(request: NextRequest) {
           body: JSON.stringify({
             model: model,
             input: {
-              prompt: prompt,
-              image: imageDataUrl, // Отправляем изображение
-              // Альтернативные варианты параметров
+              image: imageDataUrl,
               image_url: imageDataUrl,
               input_image: imageDataUrl,
-              reference_image: imageDataUrl,
+              // Параметры для upscaling
+              scale: 2,              // Увеличить в 2 раза
+              upscale_factor: 2,
+              enhance: true,
+              remove_noise: true,
+              improve_quality: true,
             },
           }),
         })
@@ -95,10 +98,11 @@ export async function POST(request: NextRequest) {
 
     if (!taskData) {
       // Если все модели не сработали, возвращаем оригинальное изображение
+      console.log('All models failed, returning original image')
       return NextResponse.json({
         success: true,
         url: imageDataUrl,
-        message: 'Using original image (API enhancement not available)',
+        message: 'Using original image (upscaling API not available)',
       })
     }
 
@@ -121,7 +125,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Enhance product error:', error)
+    console.error('Enhance quality error:', error)
     return NextResponse.json(
       { error: `Internal server error: ${error.message}` },
       { status: 500 }

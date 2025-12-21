@@ -51,7 +51,7 @@ export async function GET(
     if (status === 'completed' && imageUrl) {
       return NextResponse.json({ success: true, status: 'completed', url: imageUrl })
     } else if (status === 'failed') {
-      return NextResponse.json({ success: true, status: 'failed', error: taskStatusData.data?.msg || 'Image enhancement failed' })
+      return NextResponse.json({ success: true, status: 'failed', error: taskStatusData.data?.msg || 'Quality enhancement failed' })
     } else {
       return NextResponse.json({ success: true, status: 'processing' })
     }
