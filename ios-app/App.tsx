@@ -14,7 +14,11 @@ import * as ImagePicker from 'expo-image-picker'
 import * as FileSystem from 'expo-file-system'
 import * as Sharing from 'expo-sharing'
 
-const API_URL = 'https://your-vercel-url.vercel.app/api/remove-bg' // Замените на ваш URL
+// Для симулятора используйте localhost, для реального устройства - ваш Vercel URL
+// В симуляторе localhost работает, на реальном устройстве нужен публичный URL
+const API_URL = __DEV__ 
+  ? 'http://localhost:3000/api/remove-bg'  // Для симулятора
+  : 'https://your-vercel-url.vercel.app/api/remove-bg'  // Production
 
 export default function App() {
   const [originalImage, setOriginalImage] = useState<string | null>(null)
@@ -22,47 +26,67 @@ export default function App() {
   const [isProcessing, setIsProcessing] = useState(false)
 
   const pickImage = async () => {
-    // Запрашиваем разрешение
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (status !== 'granted') {
-      Alert.alert('Ошибка', 'Нужно разрешение на доступ к фото')
-      return
-    }
+    try {
+      // Запрашиваем разрешение
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+      if (status !== 'granted') {
+        Alert.alert('Ошибка', 'Нужно разрешение на доступ к фото')
+        return
+      }
 
-    // Выбираем изображение
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: false,
-      quality: 1,
-    })
+      // Выбираем изображение
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 1,
+      })
 
-    if (!result.canceled && result.assets[0]) {
-      const imageUri = result.assets[0].uri
-      setOriginalImage(imageUri)
-      setProcessedImage(null)
-      await removeBackground(imageUri)
+      // Если пользователь отменил выбор - просто выходим
+      if (result.canceled) {
+        return
+      }
+
+      if (result.assets && result.assets[0]) {
+        const imageUri = result.assets[0].uri
+        setOriginalImage(imageUri)
+        setProcessedImage(null)
+        await removeBackground(imageUri)
+      }
+    } catch (error: any) {
+      console.error('Error picking image:', error)
+      Alert.alert('Ошибка', 'Не удалось выбрать изображение')
     }
   }
 
   const takePhoto = async () => {
-    // Запрашиваем разрешение на камеру
-    const { status } = await ImagePicker.requestCameraPermissionsAsync()
-    if (status !== 'granted') {
-      Alert.alert('Ошибка', 'Нужно разрешение на использование камеры')
-      return
-    }
+    try {
+      // Запрашиваем разрешение на камеру
+      const { status } = await ImagePicker.requestCameraPermissionsAsync()
+      if (status !== 'granted') {
+        Alert.alert('Ошибка', 'Нужно разрешение на использование камеры')
+        return
+      }
 
-    // Делаем фото
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: false,
-      quality: 1,
-    })
+      // Делаем фото
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: false,
+        quality: 1,
+      })
 
-    if (!result.canceled && result.assets[0]) {
-      const imageUri = result.assets[0].uri
-      setOriginalImage(imageUri)
-      setProcessedImage(null)
-      await removeBackground(imageUri)
+      // Если пользователь отменил - просто выходим
+      if (result.canceled) {
+        return
+      }
+
+      if (result.assets && result.assets[0]) {
+        const imageUri = result.assets[0].uri
+        setOriginalImage(imageUri)
+        setProcessedImage(null)
+        await removeBackground(imageUri)
+      }
+    } catch (error: any) {
+      console.error('Error taking photo:', error)
+      Alert.alert('Ошибка', 'Не удалось сделать фото')
     }
   }
 
