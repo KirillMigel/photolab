@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import ImageUploader from '@/components/ImageUploader'
-import ImagePreview from '@/components/ImagePreview'
 
 export default function Home() {
   const [originalImage, setOriginalImage] = useState<string | null>(null)
@@ -82,18 +81,10 @@ export default function Home() {
             onProcessed={setProcessedImage}
             isProcessing={isProcessing}
             setIsProcessing={setIsProcessing}
+            processedImage={processedImage}
           />
         </div>
 
-        {(originalImage || processedImage) && (
-          <div className="mt-8">
-            <ImagePreview
-              originalImage={originalImage}
-              processedImage={processedImage}
-              isProcessing={isProcessing}
-            />
-          </div>
-        )}
       </div>
 
       {/* Footer */}
